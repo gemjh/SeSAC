@@ -252,7 +252,7 @@ st.markdown("""
         border: none !important;
     }
     
-    /* Primary 버튼 (CLAP-D 선택 상태) - 흰색 배경으로 지속 유지 */
+    /* Primary 버튼 (CLAP-D 선택 상태) - 흰색 배경 유지 */
     .stButton > button[data-testid="baseButton-primary"] {
         background: white !important;
         color: #1e90ff !important;
@@ -344,7 +344,7 @@ def create_demo_tables():
         # 시퀀스 생성
         sequences = [
             "CREATE SEQUENCE users_seq START WITH 1 INCREMENT BY 1 NOCACHE",
-            "CREATE SEQUENCE reports_seq START WITH 1 INCREMENT BY 1 NOCACHE"
+            "CREATE SEQUENCE patients_seq START WITH 1 INCREMENT BY 1 NOCACHE"
         ]
         
         for seq_sql in sequences:
@@ -359,21 +359,21 @@ def create_demo_tables():
                 CREATE TABLE users (
                     id NUMBER PRIMARY KEY,
                     user_id VARCHAR2(20) UNIQUE,
-                    name VARCHAR2(50),
-                    age NUMBER,
-                    gender VARCHAR2(10),
                     password_hash VARCHAR2(255)
                 )
             """)
         except oracledb.DatabaseError:
             pass
         
-        # 리포트 테이블 생성
+        # 환자 테이블 생성
         try:
             cursor.execute("""
-                CREATE TABLE reports (
+                CREATE TABLE patients (
                     id NUMBER PRIMARY KEY,
                     patient_id VARCHAR2(20),
+                    name VARCHAR2(50),
+                    age NUMBER,
+                    gender VARCHAR2(10),
                     test_type VARCHAR2(20),
                     test_date DATE,
                     requester VARCHAR2(100),
@@ -409,16 +409,16 @@ def insert_demo_data():
         if user_count == 0:
             password_hash = hashlib.md5("demo123".encode()).hexdigest()
             cursor.execute("""
-                INSERT INTO users (id, user_id, name, age, gender, password_hash)
-                VALUES (users_seq.NEXTVAL, :1, :2, :3, :4, :5)
-            """, ("01258472", "박충북", 62, "남", password_hash))
+                INSERT INTO users (id, user_id, password_hash)
+                VALUES (users_seq.NEXTVAL, :1, :2)
+            """, ("user", password_hash))
             
-            # 샘플 리포트 추가 - HTML과 동일하게 5개 생성
+            # 샘플 리포트 추가
             for i in range(5):
                 cursor.execute("""
-                    INSERT INTO reports (id, patient_id, test_type, test_date, requester, tester, status)
-                    VALUES (reports_seq.NEXTVAL, :1, :2, TO_DATE(:3, 'YYYY-MM-DD'), :4, :5, :6)
-                """, ("01258472", "CLAP-D", "2024-10-16", "충북대병원(RM) / 공현호", "백동재", "완료"))
+                    INSERT INTO patients (id, patient_id, name, age, gender, test_type, test_date, requester, tester, status)
+                    VALUES (reports_seq.NEXTVAL, :1, :2, :3,:4,:5, TO_DATE(:3, 'YYYY-MM-DD'), :4, :5, :6)
+                """, ("01258472","박충북",65, "남","CLAP-D", "2024-10-16", "충북대병원(RM) / 공현호", "백동재", "완료"))
             
             connection.commit()
             
@@ -439,7 +439,7 @@ def authenticate_user(user_id, password):
         password_hash = hashlib.md5(password.encode()).hexdigest()
         
         cursor.execute("""
-            SELECT name, age, gender FROM users 
+            SELECT * FROM users 
             WHERE user_id = :1 AND password_hash = :2
         """, (user_id, password_hash))
         
@@ -464,18 +464,18 @@ def get_reports(patient_id, test_type=None):
         
         if test_type and test_type != "전체":
             query = """
-                SELECT id, test_type, TO_CHAR(test_date, 'YYYY.MM.DD') as test_date, 
+                SELECT id, patient_id,name,age,gender,test_type, TO_CHAR(test_date, 'YYYY.MM.DD') as test_date, 
                        requester, tester, status
-                FROM reports 
+                FROM patients 
                 WHERE patient_id = :1 AND test_type = :2
                 ORDER BY test_date DESC, created_at DESC
             """
             cursor.execute(query, (patient_id, test_type))
         else:
             query = """
-                SELECT id, test_type, TO_CHAR(test_date, 'YYYY.MM.DD') as test_date, 
+                SELECT id, patient_id,name,age,gender, test_type, TO_CHAR(test_date, 'YYYY.MM.DD') as test_date, 
                        requester, tester, status
-                FROM reports 
+                FROM patients 
                 WHERE patient_id = :1
                 ORDER BY test_date DESC, created_at DESC
             """
@@ -484,7 +484,7 @@ def get_reports(patient_id, test_type=None):
         results = cursor.fetchall()
         
         return pd.DataFrame(results, columns=[
-            'ID', '검사유형', '검사일자', '의뢰인', '검사자', '상태'
+            'ID', 'patient_id','name','age','gender', '검사유형', '검사일자', '의뢰인', '검사자', '상태'
         ])
         
     except oracledb.Error as e:
@@ -503,7 +503,6 @@ def main():
         st.session_state.logged_in = False
         st.session_state.user_info = None
         st.session_state.current_page = "리포트"
-        st.session_state.selected_filter = "CLAP-D"
     
     # 로그인 상태 확인
     if not st.session_state.logged_in:
@@ -520,7 +519,7 @@ def show_login_page():
         st.markdown('<div style="text-align: center; color: white; font-size: 1.2rem; margin-bottom: 2rem;">의료 검사 시스템</div>', unsafe_allow_html=True)
         
         with st.form("login_form"):
-            user_id = st.text_input("환자 번호", placeholder="01258472")
+            user_id = st.text_input("id", placeholder="user")
             password = st.text_input("비밀번호", type="password", placeholder="demo123")
             
             if st.form_submit_button("로그인", use_container_width=True):
@@ -529,23 +528,22 @@ def show_login_page():
                     if user_info:
                         st.session_state.logged_in = True
                         st.session_state.user_info = {
-                            'user_id': user_id,
-                            'name': user_info[0],
-                            'age': user_info[1],
-                            'gender': user_info[2]
+                            'user_id': user_id
                         }
                         st.rerun()
                     else:
                         st.error("로그인 정보가 올바르지 않습니다.")
                 else:
-                    st.error("환자번호와 비밀번호를 입력해주세요.")
+                    st.error("id와 비밀번호를 입력해주세요.")
         
-        st.info("데모 계정 - 환자번호: 01258472, 비밀번호: demo123")
+        st.info("데모 계정 - id: user, 비밀번호: demo123")
 
 def show_main_interface():
-
+    # 사용자 정보
     user_info = st.session_state.user_info
-    
+    # 환자 정보
+    patient_info=get_reports("01258472")
+    # print("--------------------------------------------------------------\n\n\n",patient_info,"\n\n\n--------------------------------------------------------------")
     # 사이드바
     with st.sidebar:
         # CLAP 로고
@@ -568,12 +566,12 @@ def show_main_interface():
         
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # 사용자 정보
+
         st.markdown(f"""
-        <div class="user-info">
-            <div class="user-name">{user_info['name']} {user_info['age']}세</div>
-            <div class="user-id">{user_info['user_id']}</div>
-            <div class="user-gender">{user_info['gender']}</div>
+        <div class="patient-info">
+            <div class="patient-name">{patient_info['name'][0]} {patient_info['age'][0]}세</div>
+            <div class="patient-id">{patient_info['patient_id'][0]}</div>
+            <div class="patient-gender">{patient_info['gender'][0]}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -585,7 +583,7 @@ def show_main_interface():
     
     # 메인 컨텐츠
     if st.session_state.current_page == "리포트":
-        show_report_page(user_info['user_id'])
+        show_report_page(patient_info['patient_id'][0])
 
 def show_report_page(patient_id):
     
@@ -615,9 +613,10 @@ def show_report_page(patient_id):
     
     # 리포트 목록 가져오기
     reports_df = get_reports(patient_id, st.session_state.selected_filter)
-    
+    print('----------------------------\n\n\n',reports_df,'\n\n\n-------------------------')
     if not reports_df.empty:
         for idx, row in reports_df.iterrows():
+            print(row)
             # 리포트 아이템 HTML
             report_html = f"""
             <div class="report-item">
