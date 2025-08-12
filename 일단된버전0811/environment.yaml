@@ -1,0 +1,32 @@
+name: CLAP_PC
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - ffmpeg
+  - numpy
+  - pandas
+  - scikit-learn
+  - matplotlib
+  - jupyter
+  - ipykernel
+  - pip:
+      - streamlit==1.39.0
+      - tensorflow-macos<=2.18.0      # (Apple Silicon)
+      - tensorflow==2.19.0 
+      - tensorflow-metal==1.1.0       # (Apple Silicon 전용, Intel/리눅스는 제거)
+      - tensorflow-hub==0.16.1
+      - torch==2.5.1
+      - torchaudio==2.5.1
+      - transformers==4.46.3
+      - librosa==0.10.2
+      - soundfile==0.12.1
+      - openai-whisper>=20231117
+      - mysql-connector-python==9.1.0
+      - plotly==5.24.1
+      - scipy==1.14.1
+      - sympy==1.13.1
+      - pydub==0.25.1
+      - python-dotenv==1.1.1

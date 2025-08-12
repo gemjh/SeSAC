@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  streamlit:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./audio_files:/app/audio_files
+      - ./models:/app/models
+    environment:
+      - PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# 환경변수 설정
+export TF_CPP_MIN_LOG_LEVEL=3
+export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+export ARROW_PRE_1_0_METADATA_VERSION=1
+export ARROW_LIBHDFS3_DIR=""
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export TF_FORCE_GPU_ALLOW_GROWTH=true
+export TF_ENABLE_ONEDNN_OPTS=0
+export CUDA_VISIBLE_DEVICES=-1
+
+# Python 스크립트 실행
+exec "$1" "$(dirname "$0")/predict_script.py" "$2"
