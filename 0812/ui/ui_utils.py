@@ -270,39 +270,6 @@ def apply_custom_css():
     """CSS 스타일을 적용하는 함수"""
     st.markdown(CSS_STYLES, unsafe_allow_html=True)
 
-def get_common_info(patient_info, report_date):
-    """환자 공통 정보를 표시하는 함수"""
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.write(f"**의뢰 기관(과)/의뢰인** ")
-        st.write(f"**이름**{patient_info['name']} ")
-        st.write(f"**교육연수** ")
-        st.write(f"**방언** ")
-
-    with col2:
-        st.write(f"**검사자명**")
-        st.write(f"**성별** ")
-        st.write(f"**문해여부** ")
-        st.write(f"**발병일** ")
-
-    with col3:
-        st.write(f"검사일자**{report_date}** ")
-        st.write(f"**개인번호** ")
-
-    st.write(f"**진단명** ")
-    st.write(f"**주요 뇌병변 I** ")
-    st.write(f"**주요 뇌병변 II** ")
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.write(f"**편마비** ")
-    with col2:
-        st.write(f"**무시증** ")
-    with col3:
-        st.write(f"**시야결손** ")
-
-    st.write(f"**기타 특이사항** ")
-    st.divider()
 
 def create_evaluation_table_html(eval_item):
     """st.components.v1.html을 위한 완전한 HTML 문서 생성"""

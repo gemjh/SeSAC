@@ -4,19 +4,42 @@ import plotly.express as px
 import streamlit.components.v1 as components
 import tempfile
 import os
+import zipfile
+import shutil
 
+# 페이지 설정
+st.set_page_config(
+    page_title="CLAP",
+    page_icon="👋",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 # TensorFlow 로딩 상태 표시
-# if 'tf_loaded' not in st.session_state:
-#     with st.spinner('TensorFlow 로딩 중...'):
-#         import tensorflow as tf
-#         st.session_state.tf_loaded = True
-# print('tf 임포트 완료')
+if 'tf_loaded' not in st.session_state:
+    with st.spinner('TensorFlow 로딩 중...'):
+        import tensorflow as tf
+        st.session_state.tf_loaded = True
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+# project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# sys.path.insert(0, os.path.join(os.path.dirname(project_root), '0812'))
 
+from db.src import (
+    model_comm,
+    report_main
+)
 # print(sys.path)
-from models import *
+# if 'loading_all_ok' not in st.session_state:
+#     with st.spinner('모델 로딩 중...'):
+from models import (
+    talk_pic,
+    ah_sound,
+    ptk_sound
+)
+
+
+        # st.session_state.loading_all_ok = True
 from data_utils import (
     evaluation_data, 
     get_reports
@@ -28,18 +51,9 @@ from ui_utils import (
     create_sentence_level_table
 )
 from auth_utils import authenticate_user
-from db.src import (
-    model_comm,
-    report_main
-)
 
-# 페이지 설정
-st.set_page_config(
-    page_title="CLAP",
-    page_icon="👋",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+
+
 
 apply_custom_css()
 
@@ -85,25 +99,69 @@ def show_login_page():
         st.info("데모 계정 - id: user, 비밀번호: d")
 
 def show_main_interface():
+    # all_patient_info=''
+    blnk=pd.DataFrame({'patient_id':["선택"]})
+    msg, ret_df=report_main.get_patient_lst()
+    all_patient_info=ret_df.copy()
+    all_patient_info.columns = ["patient_id", "name","sex", "age"]
     if st.button("< 뒤로가기"):
         st.session_state.view_mode = "list"
+        # patient_info_str = st.selectbox("환자번호",pd.concat([blnk,all_patient_info['patient_id']]))
+        # patient_info=all_patient_info[all_patient_info['patient_id']==patient_info_str]
         st.rerun()
     # 사이드바
     with st.sidebar:
         st.title("👋 CLAP")
-        patent_file = st.file_uploader("zip파일 업로드")
-        msg, ret_df=report_main.get_patient_lst()
-        all_patient_info=ret_df.copy()
-        all_patient_info.columns = ["patient_id", "name","sex", "age"]
-        blnk=pd.DataFrame({'patient_id':["선택"]})
+        patient_file = st.file_uploader("zip파일 업로드", type="zip")
+
+        save_dir = tempfile.gettempdir()
+        os.makedirs(save_dir, exist_ok=True)
+
+        if patient_file:
+            # ZIP 저장 경로
+            save_path = os.path.join(save_dir, patient_file.name)
+            with open(save_path, "wb") as f:
+                f.write(patient_file.getbuffer())
+
+            # 압축 해제 경로 (zip 확장자 제거)
+            extract_dir = os.path.join(save_dir, os.path.splitext(patient_file.name)[0])
+            
+            # 기존 폴더 있으면 삭제
+            if os.path.exists(extract_dir):
+                shutil.rmtree(extract_dir)
+            os.makedirs(extract_dir, exist_ok=True)
+
+            # 압축 해제
+            with zipfile.ZipFile(save_path, "r") as zip_ref:
+                zip_ref.extractall(extract_dir)
+
+            # st.success(f"압축 해제 완료! 폴더 경로: {extract_dir}")
+            
+            # 압축 해제된 파일 구조 출력 (디버깅용)
+            # def print_directory_structure(path, prefix=""):
+            #     try:
+            #         items = os.listdir(path)
+            #         for item in items:
+            #             item_path = os.path.join(path, item)
+            #             print(f"{prefix}{item}")
+            #             if os.path.isdir(item_path) and len(prefix) < 10:  # 깊이 제한
+            #                 print_directory_structure(item_path, prefix + "  ")
+            #     except:
+            #         pass
+            
+            # print("=== 압축 해제된 파일 구조 ===")
+            # print_directory_structure(extract_dir)
+            # print("=== 파일 구조 끝 ===")
+
         patient_info_str = st.selectbox("환자번호",pd.concat([blnk,all_patient_info['patient_id']]))
         patient_info=all_patient_info[all_patient_info['patient_id']==patient_info_str]
-        if ("confirmed" not in st.session_state) or (patient_info_str=="선택") or (patent_file is None):
+        if ("confirmed" not in st.session_state) or (patient_info_str=="선택") or (patient_file is None):
             st.session_state.confirmed = False
         # if not st.session_state.confirmed:
             # if (patent_file is not None) & (patient_info_str!="선택"):
         else:
             st.session_state.confirmed = True
+
                     # 메뉴: 있어야 할까?
                     # menu_items = ["평가", "재활", "리포트"]
                     # for item in menu_items:
@@ -124,7 +182,7 @@ def show_main_interface():
             
             st.write(f"**{patient_info['name'].iloc[0]} {patient_info['age'].iloc[0]}세**")
             st.write(f"환자번호: {patient_info['patient_id'].iloc[0]}")
-            st.write(f"성별: {"여성" if patient_info['sex'].iloc[0]==1 else "남성"}")
+            st.write(f"성별: {'여성' if patient_info['sex'].iloc[0]==1 else '남성'}")
         # 로그아웃 버튼
         if st.button("로그아웃", key="logout", use_container_width=True):
             st.session_state.logged_in = False
@@ -136,12 +194,21 @@ def show_main_interface():
 
         # import sys
         # sys.path.append(r'../../db/src')
-        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # base_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), '0812')        
+        # base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
         # print(base_path)
-        # print("--------------------- base_path ---------------------\n\n\n")
+        # print("--------------------- extract_dir ---------------------\n\n\n")
+        # print(extract_dir)
+        # print("--------------------- extract_dir ---------------------\n\n\n")
+        
         msg, ret = model_comm.get_file_lst()
         # print(ret)
         # wav_label_pairs = []
+        print("--------------------- extract_dir ---------------------\n\n\n")
+        print(extract_dir)
+        print("--------------------- extract_dir ---------------------\n\n\n")
+        
         ah_sound_path=[]
         ptk_sound_path=[]
         ltn_rpt_path=[]
@@ -152,16 +219,54 @@ def show_main_interface():
         talk_clean_path=[]
         talk_pic_path=[]
         for i in range(len(ret)):
-            t = (os.path.join(base_path, 'db','src', f"{ret.loc[i, 'Path']}", f"{ret.loc[i, 'File Name']}"), int(ret.loc[i, 'Score(Refer)']),0 if ret.loc[i, 'Score(Alloc)']==None else int(ret.loc[i, 'Score(Alloc)']))
-            # print(ret.loc[i, 'Path'])
-            # print("--------------------- ret.loc[i, 'Path'] ---------------------\n\n\n")
+            # if ret.loc[i, 'Path'].split('/')==extract_dir.split('/')[-1]:
             if ret.loc[i, 'Path'].split('/')[0]==patient_info_str:
+
+                relative_path = ret.loc[i, 'Path'].replace(patient_info_str, '').lstrip(os.sep)
+                file_path = os.path.join(extract_dir, relative_path, f"{ret.loc[i, 'File Name']}")
+                
+                # 파일 존재 여부 확인
+                if not os.path.exists(file_path):
+                    print(f"❌ 파일 없음: {file_path}")
+                    # 대안 경로들 시도
+                    alt_paths = [
+                        os.path.join(extract_dir, f"{ret.loc[i, 'File Name']}"),  # 최상위 경로
+                        os.path.join(extract_dir, patient_info_str, relative_path, f"{ret.loc[i, 'File Name']}"),  # 환자번호 포함
+                    ]
+                    for alt_path in alt_paths:
+                        if os.path.exists(alt_path):
+                            print(f"✅ 대안 경로 발견: {alt_path}")
+                            file_path = alt_path
+                            break
+                    else:
+                        print(f"❌ 모든 대안 경로 실패 - 스킵")
+                        continue
+                else:
+                    print(f"✅ 파일 발견: {file_path}")
+                
+                t = (file_path, int(ret.loc[i, 'Score(Refer)']), 0 if ret.loc[i, 'Score(Alloc)'] == None else int(ret.loc[i, 'Score(Alloc)']))
+                print(f"최종 경로: {t[0]}")
+                print("--------------------- t ---------------------\n\n\n")
                 # d일때
+                # print(ret.loc[i, 'Path'].split('/')[1])
                 if (ret.loc[i, 'Path'].split('/')[1]=='clap_d'):
+                    # print(ret.loc[i, 'Path'].split('/')[2])   
+                    # print("--------------------- clap_d/? ---------------------\n\n\n")
+                    
                     if (ret.loc[i, 'Path'].split('/')[2]=='0'):
                         ah_sound_path.append(t[0])
+                        # print(ah_sound_path)
+                        # print(ah_sound.analyze_pitch_stability(ah_sound_path[0]))
+                        if 'ah_sound_result' not in st.session_state:
+
+                            st.session_state.ah_sound_result=ah_sound.analyze_pitch_stability(ah_sound_path[0])
+                            print('-------------- ah_sound modeling(1번째 값) ---------------\n\n\n')
+
                     elif (ret.loc[i, 'Path'].split('/')[2]=='1'):
                         ptk_sound_path.append(t[0])
+                        if 'ptk_sound_result' not in st.session_state:
+                            st.session_state.ptk_sound_result=ptk_sound.count_peaks_from_waveform(ptk_sound_path[0])
+                        print('-------------- ptk_sound modeling(1번째 값) ---------------\n\n\n')
                     elif (ret.loc[i, 'Path'].split('/')[2]=='2'):
                         talk_clean_path.append(t[0])
                     elif (ret.loc[i, 'Path'].split('/')[2]=='3'):
@@ -180,12 +285,32 @@ def show_main_interface():
                         say_ani_path.append(t[0])
                     elif (ret.loc[i, 'Path'].split('/')[2]=='7'):
                         talk_pic_path.append(t[0])
+                        if 'talk_pic_result' not in st.session_state:
+                            st.session_state.talk_pic_result=talk_pic.score_audio(talk_pic_path[0])
+                        print('-------------- talk_pic modeling(1번째 값) ---------------\n\n\n')
+                        talk_pic_path.append(t[0])
             # print("---------------------  ---------------------\n\n\n")
-        print(ah_sound_path,ptk_sound_path,ltn_rpt_path,guess_end_path,read_clean_path,
+        print(
+        ah_sound_path,ptk_sound_path,ltn_rpt_path,guess_end_path,read_clean_path,
         say_ani_path,
         say_obj_path,
         talk_clean_path,
         talk_pic_path)
+        print("--------------------- path ---------------------\n\n\n")
+        print('------------------------- 모델링 구간 ---------------------------\n\n\n')
+
+        # path_names = [
+        #     'ah_sound', 'ptk_sound', 'talk_clean', 'read_clean',
+        #     'ltn_rpt', 'guess_end', 'say_obj', 'say_ani', 'talk_pic'
+        # ]
+        # path_codes=['clap_d/0','clap_d/1','clap_d/2','clap_d/3','clap_a/3','clap_a/4','clap_a/5','clap_a/6','clap_a/7']
+        
+        # with st.spinner('모델 로딩 중...'):
+            
+
+        print('------------------------- 모델링 완료 ---------------------------\n\n\n')
+
+
             # wav_label_pairs.append(t)
 
         if st.session_state.view_mode == "list":
@@ -198,6 +323,8 @@ def show_main_interface():
             st.divider()
     else:
         st.info("zip파일과 환자 번호를 모두 선택해 주세요")
+        patient_info_str = '선택'
+        patient_info=all_patient_info[all_patient_info['patient_id']==patient_info_str]
 
 
 def show_report_page(patient_id):
@@ -283,7 +410,7 @@ def show_detail_common():
 
     with col2:
         st.write(f"검사자명 {patient_info['검사자']}")
-        st.write(f"성별 {"여자" if patient_info['sex']==1 else "남자"}")
+        st.write(f"성별 {'여자' if patient_info['sex']==1 else '남자'}")
         st.write(f"문해여부 NN")
         st.write(f"발병일 NN")
 
@@ -316,7 +443,7 @@ def show_clap_a_detail():
     # 검사 결과
     if not clap_a_data.empty:
         st.subheader("결과 요약")
-
+        st.write('그림보고 말하기:',st.session_state.talk_pic_result,'점')
         # 차트
 
 def show_clap_d_detail():
@@ -329,6 +456,10 @@ def show_clap_d_detail():
 
     if not clap_d_data.empty:
         st.subheader("결과 요약")
+
+        st.write('아 소리내기:',st.session_state.ah_sound_result)
+        st.write('퍼터커 소리내기:',st.session_state.ptk_sound_result)
+
         word_level,sentence_level,consonant_word,vowel_word,consonant_sentence='N','N','N','N','N'
         max_time,pa_avg,ta_avg,ka_avg,ptk_avg='N','N','N','N','N'
         total_score = 'N'

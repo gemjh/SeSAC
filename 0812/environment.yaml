@@ -18,7 +18,7 @@ dependencies:
       - tensorflow==2.19.0 
 #      - tensorflow-metal==1.1.0       # (Apple Silicon 전용, Intel/리눅스는 제거)
       - tensorflow-hub==0.16.1
-      - torch==2.5.1
+      - torch==2.8.0
       - torchaudio==2.5.1
       - transformers==4.46.3
       - librosa==0.10.2

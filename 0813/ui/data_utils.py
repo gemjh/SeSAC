@@ -1,7 +1,10 @@
 import pandas as pd
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# 0812 폴더 경로를 sys.path에 추가
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(project_root), '0812'))
 
 import db.src.report_main as rmn
 import db.src.model_comm as mc

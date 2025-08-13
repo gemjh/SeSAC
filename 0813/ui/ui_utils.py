@@ -3,10 +3,18 @@ import streamlit as st
 # CSS 스타일 정의
 CSS_STYLES = """
 <style>
-/* 전체 앱 배경 */
-.stApp {
+/* 전체 앱 및 헤더 배경 */
+.stApp{
     background: linear-gradient(135deg, #1e90ff, #00bfff);  
     color: white;
+}
+h1, h2, h3 {
+    color: white;
+}
+
+/* 헤더 배경 제거 */
+header[data-testid="stHeader"] {
+    background: transparent !important;
 }
 
 /* 사이드바 스타일 - 파란색 그라데이션 */
@@ -22,6 +30,20 @@ CSS_STYLES = """
 /* 사이드바 모든 요소 */
 section[data-testid="stSidebar"] {
     background: linear-gradient(135deg, #1e90ff, #00bfff) !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: fit-content !important;
+    min-width: 200px !important;
+}
+section.stSidebar {
+    background: linear-gradient(135deg, #1e90ff, #00bfff) !important;
+    width: fit-content !important;
+    min-width: 200px !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 section[data-testid="stSidebar"] > div {
     display: flex !important;
@@ -270,39 +292,6 @@ def apply_custom_css():
     """CSS 스타일을 적용하는 함수"""
     st.markdown(CSS_STYLES, unsafe_allow_html=True)
 
-def get_common_info(patient_info, report_date):
-    """환자 공통 정보를 표시하는 함수"""
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.write(f"**의뢰 기관(과)/의뢰인** ")
-        st.write(f"**이름**{patient_info['name']} ")
-        st.write(f"**교육연수** ")
-        st.write(f"**방언** ")
-
-    with col2:
-        st.write(f"**검사자명**")
-        st.write(f"**성별** ")
-        st.write(f"**문해여부** ")
-        st.write(f"**발병일** ")
-
-    with col3:
-        st.write(f"검사일자**{report_date}** ")
-        st.write(f"**개인번호** ")
-
-    st.write(f"**진단명** ")
-    st.write(f"**주요 뇌병변 I** ")
-    st.write(f"**주요 뇌병변 II** ")
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.write(f"**편마비** ")
-    with col2:
-        st.write(f"**무시증** ")
-    with col3:
-        st.write(f"**시야결손** ")
-
-    st.write(f"**기타 특이사항** ")
-    st.divider()
 
 def create_evaluation_table_html(eval_item):
     """st.components.v1.html을 위한 완전한 HTML 문서 생성"""

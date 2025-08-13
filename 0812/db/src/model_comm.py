@@ -18,7 +18,7 @@ def get_connection():
 
 
 # 파일 경로와 목록 정보를 조회
-def get_file_lst(assess_type, question_cd, question_no=None, order_num=None):
+def get_file_lst(question_no=None, order_num=None):
     conn = None
     cursor = None
     try:
@@ -45,8 +45,6 @@ def get_file_lst(assess_type, question_cd, question_no=None, order_num=None):
         sql +=  "		on lst.ASSESS_TYPE = alc.ASSESS_TYPE "
         sql +=  "		and lst.QUESTION_CD = alc.QUESTION_CD "
         sql +=  "		and lst.QUESTION_NO = alc.QUESTION_NO "
-        sql += f"where lst.ASSESS_TYPE = '{assess_type}' "
-        sql += f"and lst.QUESTION_CD = '{question_cd}' "
         if question_no:
             sql += f"and lst.QUESTION_NO = {question_no} "
         if order_num:

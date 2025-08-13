@@ -19,9 +19,13 @@ except ImportError as e:
 
 def setup_tensorflow():
     """TensorFlow 환경 설정"""
-    # 스레드 수 제한으로 안정성 향상
-    tf.config.threading.set_intra_op_parallelism_threads(1)
-    tf.config.threading.set_inter_op_parallelism_threads(1)
+    # 스레드 수 제한으로 안정성 향상 (이미 초기화된 경우 무시)
+    try:
+        tf.config.threading.set_intra_op_parallelism_threads(1)
+        tf.config.threading.set_inter_op_parallelism_threads(1)
+    except RuntimeError:
+        # TensorFlow가 이미 초기화된 경우 무시
+        print("TensorFlow 이미 초기화됨 - 병렬 처리 설정 건너뜀")
     
     # GPU 설정 (오류 무시)
     try:
