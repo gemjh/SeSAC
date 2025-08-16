@@ -20,14 +20,21 @@ import shutil
 import numpy as np
 import librosa
 import torch
+import tensorflow as tf
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from tensorflow.keras.models import load_model
 
+from pathlib import Path
+if sys.platform.startswith('win'):
+    WINOS=True
+    print("현재 운영체제는 윈도우입니다.")
+else: WINOS = False
+
 # TensorFlow 로딩 상태 표시
-if 'tf_loaded' not in st.session_state:
-    with st.spinner('TensorFlow 로딩 중...'):
-        import tensorflow as tf
-        st.session_state.tf_loaded = True
+# if 'tf_loaded' not in st.session_state:
+#     with st.spinner('TensorFlow 로딩 중...'):
+#         import tensorflow as tf
+#         st.session_state.tf_loaded = True
 
 
 # ------------------- db 폴더 경로 통일하려고 씀, 최종적으로는 삭제 필요 -------------------
@@ -62,7 +69,7 @@ from ui_utils import (
 )
 from auth_utils import authenticate_user
 
-
+from zip_upload3 import zip_upload
 
 
 apply_custom_css()
@@ -81,6 +88,8 @@ def main():
     if not st.session_state.logged_in:
         show_login_page()
     else:
+        if 'patients_info' not in st.session_state:
+            zip_upload()
         show_main_interface()
 
 def show_login_page():
@@ -125,7 +134,9 @@ def show_main_interface():
         patient_file = st.file_uploader("zip파일 업로드", type="zip")
 
         save_dir = tempfile.gettempdir()
-        os.makedirs(save_dir, exist_ok=True)
+        os.makedirs(save_dir, exist_ok=True)    # 동명파일이면 덮어씀
+
+
 
         if patient_file:
             # ZIP 저장 경로
@@ -135,6 +146,7 @@ def show_main_interface():
 
             # 압축 해제 경로 (zip 확장자 제거)
             extract_dir = os.path.join(save_dir, os.path.splitext(patient_file.name)[0])
+            print(f'----------------------------- 압축 해제 경로: {extract_dir} -----------------------------\n\n\n')
             
             # 기존 폴더 있으면 삭제
             if os.path.exists(extract_dir):
@@ -193,12 +205,16 @@ def show_main_interface():
             st.write(f"**{patient_info['name'].iloc[0]} {patient_info['age'].iloc[0]}세**")
             st.write(f"환자번호: {patient_info['patient_id'].iloc[0]}")
             st.write(f"성별: {'여성' if patient_info['sex'].iloc[0]==1 else '남성'}")
+           
+        st.markdown("""
+            <div style='flex-grow: 1;'></div>
+        """, unsafe_allow_html=True)
+        
         # 로그아웃 버튼
         if st.button("로그아웃", key="logout", use_container_width=True):
             st.session_state.logged_in = False
             st.session_state.user_info = None
             st.rerun()
-
             
     if st.session_state.confirmed and 'selected_filter' in st.session_state:
 
@@ -230,78 +246,110 @@ def show_main_interface():
         talk_pic_path=[]
         for i in range(len(ret)):
             # if ret.loc[i, 'Path'].split('/')==extract_dir.split('/')[-1]:
-            if ret.loc[i, 'Path'].split('/')[0]==patient_info_str:
+            # if WINOS == False:
+            # patient_info_str = st.selectbox("환자번호",pd.concat([blnk,all_patient_info['patient_id']]))
+            p = Path(str(ret.loc[i, 'Path']))  # 문자열 → Path (OS에 맞게 해석)
+            # print(p)
+            # print("--------------------- p ---------------------\n\n\n")
 
-                relative_path = ret.loc[i, 'Path'].replace(patient_info_str, '').lstrip(os.sep)
-                file_path = os.path.join(extract_dir, relative_path, f"{ret.loc[i, 'File Name']}")
-                
+            parts = p.parts
+
+            # 환자번호가 경로 어딘가에 있는지부터 확인 (Windows의 드라이브/루트 문제 회피)
+            if patient_info_str not in parts:
+                continue
+
+            # 환자번호가 나타나는 위치를 기준으로 '그 뒤'를 상대 경로로 사용
+            # idx = parts.index(patient_info_str)
+            # 환자번호 이후의 경로(파일명 포함 가능)
+            # tail = Path(*parts[idx+1:])
+
+            # ret 쪽 파일명이 tail의 마지막과 일치하는지 확인해 중복 추가 방지
+            filename = str(ret.loc[i, 'File Name'])
+            # if tail.name == filename:
+            #     relative_dir = tail.parent        # 이미 파일명이 포함되어 있었으면 디렉토리만
+            # else:
+            #     relative_dir = tail               # 파일명이 포함되지 않았다면 그대로 사용
+
+            # 최종 경로 생성
+            # file_path = Path(extract_dir) / relative_dir / filename
+            file_path = Path(extract_dir) / Path(parts) / filename
+
+
+            # 필요하다면 문자열로 변환
+            file_path = str(file_path)
+            print(file_path)
+            print("--------------------- file_path ---------------------\n\n\n")
                 # 파일 존재 여부 확인
-                if not os.path.exists(file_path):
-                    print(f"❌ 파일 없음: {file_path}")
-                    # 대안 경로들 시도
-                    alt_paths = [
-                        os.path.join(extract_dir, f"{ret.loc[i, 'File Name']}"),  # 최상위 경로
-                        os.path.join(extract_dir, patient_info_str, relative_path, f"{ret.loc[i, 'File Name']}"),  # 환자번호 포함
-                    ]
-                    for alt_path in alt_paths:
-                        if os.path.exists(alt_path):
-                            print(f"✅ 대안 경로 발견: {alt_path}")
-                            file_path = alt_path
-                            break
-                    else:
-                        print(f"❌ 모든 대안 경로 실패 - 스킵")
-                        continue
-                else:
-                    print(f"✅ 파일 발견: {file_path}")
+            if not os.path.exists(file_path):
+                st.warning(f"❌ 파일 없음: {file_path}")
+                # print(f"❌ 파일 없음: {file_path}")
+                break
+
+                # 대안 경로들 시도
+            #     alt_paths = [
+            #         os.path.join(extract_dir, f"{ret.loc[i, 'File Name']}"),  # 최상위 경로
+            #         os.path.join(extract_dir, patient_info_str, relative_path, f"{ret.loc[i, 'File Name']}"),  # 환자번호 포함
+            #     ]
+            #     for alt_path in alt_paths:
+            #         if os.path.exists(alt_path):
+            #             print(f"✅ 대안 경로 발견: {alt_path}")
+            #             file_path = alt_path
+            #             break
+            #     else:
+            #         print(f"❌ 모든 대안 경로 실패 - 스킵")
+            #         continue
+            # else:
+            #     print(f"✅ 파일 발견: {file_path}")
+            
+            t = (file_path, int(ret.loc[i, 'Score(Refer)']), 0 if ret.loc[i, 'Score(Alloc)'] == None else int(ret.loc[i, 'Score(Alloc)']))
+            print(f"최종 경로: {t[0]}")
+            print("--------------------- t ---------------------\n\n\n")
+            # d일때
+            # print(ret.loc[i, 'Path'].split('/')[1])
+            # Path(ret.loc[i, 'Path']).parts[0]==patient_info_str
+            if Path(ret.loc[i, 'Path']).parts[1]=='clap_d':
+                # print(ret.loc[i, 'Path'].split('/')[2])   
+                # print("--------------------- clap_d/? ---------------------\n\n\n")
                 
-                t = (file_path, int(ret.loc[i, 'Score(Refer)']), 0 if ret.loc[i, 'Score(Alloc)'] == None else int(ret.loc[i, 'Score(Alloc)']))
-                print(f"최종 경로: {t[0]}")
-                print("--------------------- t ---------------------\n\n\n")
-                # d일때
-                # print(ret.loc[i, 'Path'].split('/')[1])
-                if (ret.loc[i, 'Path'].split('/')[1]=='clap_d'):
-                    # print(ret.loc[i, 'Path'].split('/')[2])   
-                    # print("--------------------- clap_d/? ---------------------\n\n\n")
-                    
-                    if (ret.loc[i, 'Path'].split('/')[2]=='0'):
-                        ah_sound_path.append(t[0])
-                        # print(ah_sound_path)
-                        # print(ah_sound.analyze_pitch_stability(ah_sound_path[0]))
-                        if 'ah_sound_result' not in st.session_state:
+                if (Path(ret.loc[i, 'Path']).parts[2]=='0'):
+                    ah_sound_path.append(t[0])
+                    # print(ah_sound_path)
+                    # print(ah_sound.analyze_pitch_stability(ah_sound_path[0]))
+                    if 'ah_sound_result' not in st.session_state:
 
-                            st.session_state.ah_sound_result=ah_sound.analyze_pitch_stability(ah_sound_path[0])
-                            print('-------------- ah_sound modeling(1번째 값) ---------------\n\n\n')
+                        st.session_state.ah_sound_result=ah_sound.analyze_pitch_stability(ah_sound_path[0])
+                        print('-------------- ah_sound modeling(1번째 값) ---------------\n\n\n')
 
-                    elif (ret.loc[i, 'Path'].split('/')[2]=='1'):
-                        ptk_sound_path.append(t[0])
-                        if 'ptk_sound_result' not in st.session_state:
-                            st.session_state.ptk_sound_result=ptk_sound.count_peaks_from_waveform(ptk_sound_path[0])
-                        print('-------------- ptk_sound modeling(1번째 값) ---------------\n\n\n')
-                    elif (ret.loc[i, 'Path'].split('/')[2]=='2'):
-                        talk_clean_path.append(t[0])
-                        if 'talk_clean_result' not in st.session_state:
-                            st.session_state.talk_clean_result=talk_clean.main(talk_clean_path[0])
-                        print('-------------- talk_clean modeling(1번째 값) ---------------\n\n\n')
-                    elif (ret.loc[i, 'Path'].split('/')[2]=='3'):
-                        read_clean_path.append(t[0])
-                    # else도 고려?
+                elif (Path(ret.loc[i, 'Path']).parts[2]=='1'):
+                    ptk_sound_path.append(t[0])
+                    if 'ptk_sound_result' not in st.session_state:
+                        st.session_state.ptk_sound_result=ptk_sound.count_peaks_from_waveform(ptk_sound_path[0])
+                    print('-------------- ptk_sound modeling(1번째 값) ---------------\n\n\n')
+                elif (Path(ret.loc[i, 'Path']).parts[2]=='2'):
+                    talk_clean_path.append(t[0])
+                    if 'talk_clean_result' not in st.session_state:
+                        st.session_state.talk_clean_result=talk_clean.main(talk_clean_path[0])
+                    print('-------------- talk_clean modeling(1번째 값) ---------------\n\n\n')
+                elif (Path(ret.loc[i, 'Path']).parts[2]=='3'):
+                    read_clean_path.append(t[0])
+                # else도 고려?
 
-                # a일때
-                elif (ret.loc[i, 'Path'].split('/')[1]=='clap_a'):
-                    if (ret.loc[i, 'Path'].split('/')[2]=='3'):
-                        ltn_rpt_path.append(t[0])
-                    elif  (ret.loc[i, 'Path'].split('/')[2]=='4'):
-                        guess_end_path.append(t[0])
-                    elif (ret.loc[i, 'Path'].split('/')[2]=='5'):
-                        say_obj_path.append(t[0])
-                    elif (ret.loc[i, 'Path'].split('/')[2]=='6'):
-                        say_ani_path.append(t[0])
-                    elif (ret.loc[i, 'Path'].split('/')[2]=='7'):
-                        talk_pic_path.append(t[0])
-                        if 'talk_pic_result' not in st.session_state:
-                            st.session_state.talk_pic_result=talk_pic.score_audio(talk_pic_path[0])
-                        print('-------------- talk_pic modeling(1번째 값) ---------------\n\n\n')
-                        talk_pic_path.append(t[0])
+            # a일때
+            elif (Path(ret.loc[i, 'Path']).parts[1]=='clap_a'):
+                if (Path(ret.loc[i, 'Path']).parts[2]=='3'):
+                    ltn_rpt_path.append(t[0])
+                elif  (Path(ret.loc[i, 'Path']).parts[2]=='4'):
+                    guess_end_path.append(t[0])
+                elif (Path(ret.loc[i, 'Path']).parts[2]=='5'):
+                    say_obj_path.append(t[0])
+                elif (Path(ret.loc[i, 'Path']).parts[2]=='6'):
+                    say_ani_path.append(t[0])
+                elif (Path(ret.loc[i, 'Path']).parts[2]=='7'):
+                    talk_pic_path.append(t[0])
+                    if 'talk_pic_result' not in st.session_state:
+                        st.session_state.talk_pic_result=talk_pic.score_audio(talk_pic_path[0])
+                    print('-------------- talk_pic modeling(1번째 값) ---------------\n\n\n')
+                    talk_pic_path.append(t[0])
             # print("---------------------  ---------------------\n\n\n")
         print(
         ah_sound_path,ptk_sound_path,ltn_rpt_path,guess_end_path,read_clean_path,
@@ -310,7 +358,7 @@ def show_main_interface():
         talk_clean_path,
         talk_pic_path)
         print("--------------------- path ---------------------\n\n\n")
-        print('------------------------- 모델링 구간 ---------------------------\n\n\n')
+        # print('------------------------- 모델링 구간 ---------------------------\n\n\n')
 
         # path_names = [
         #     'ah_sound', 'ptk_sound', 'talk_clean', 'read_clean',
@@ -321,7 +369,7 @@ def show_main_interface():
         # with st.spinner('모델 로딩 중...'):
             
 
-        print('------------------------- 모델링 완료 ---------------------------\n\n\n')
+        # print('------------------------- 모델링 완료 ---------------------------\n\n\n')
 
 
             # wav_label_pairs.append(t)
