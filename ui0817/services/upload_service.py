@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 
-env_path = Path(__file__).parent.parent / ".env"
+env_path = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 def get_connection():
@@ -41,9 +41,11 @@ def zip_upload(patient_id,uploaded_file,btn_apply):
 
             extract_path = "temp_upload_folder"
             upload_path = 'upload_folder'
-            
-            zip_ref.extractall(extract_path)
-
+            try:
+                zip_ref.extractall(extract_path)
+            except OSError as e:
+                print(f"파일 다운로드 중 불필요한 파일 스킵: {extract_path}")
+                pass
             # 폴더명 수정
             for folder_name in os.listdir(extract_path):
                 folder_path = os.path.join('./'+extract_path, folder_name)
@@ -240,6 +242,22 @@ def zip_upload(patient_id,uploaded_file,btn_apply):
                 conn.rollback()  # 오류 발생 시 롤백
             finally:
                 pass
+
+            # assess_lst 테이블에 데이터 입력
+            # sql = ""
+            # sql += "INSERT INTO ASSESS_LST (PATIENT_ID, ORDER_NUM, ASSESS_TYPE, QUESTION_CD, QUESTION_NO, QUESTION_MINOR_NO, USE_YN) \n"
+            # sql += "SELECT PATIENT_ID, ORDER_NUM, ASSESS_TYPE, QUESTION_CD, QUESTION_NO, QUESTION_MINOR_NO, USE_YN \n "
+            # sql += "FROM ASSESS_FILE_LST \n"
+            # sql += "WHERE PATIENT_ID = %s AND ORDER_NUM = %s "
+            # try:
+            #     cursor.execute(sql, (patient_id, str(order_num)))
+            #     print(f'ASSESS_LST 테이블에 데이터 입력({patient_id})')
+            #     conn.commit()
+            # except Exception as e:
+            #     print(f"[Exception] ASSESS_LST 입력({patient_id}) 중 오류 발생: {e}")
+            #     conn.rollback()  # 오류 발생 시 롤백
+            # finally:
+            #     pass
 
             # 저장한 파일 정보를 조회
             st.subheader("저장한 파일 정보 조회")

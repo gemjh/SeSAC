@@ -39,9 +39,9 @@ def show_main_interface(patient_id):
             st.session_state.selected_filter = "CLAP_A"
         patient_info=get_reports(patient_id)
         if patient_info is not None:
-            st.write(f"**{patient_info['name'].iloc[0]} {patient_info['age'].iloc[0]}세**")
-            st.write(f"환자번호: {patient_info['patient_id'].iloc[0]}")
-            st.write(f"성별: {'여성' if patient_info['sex'].iloc[0]==1 else '남성'}")
+            st.write(f"**{patient_info['PATIENT_NAME'].iloc[0]} {patient_info['AGE'].iloc[0]}세**")
+            st.write(f"환자번호: {patient_info['PATIENT_ID'].iloc[0]}")
+            st.write(f"성별: {'여성' if patient_info['SEX'].iloc[0]==1 else '남성'}")
         else:
             st.write("환자 정보를 등록하면 여기 표시됩니다")
         st.divider()     
@@ -51,65 +51,13 @@ def show_main_interface(patient_id):
             st.session_state.logged_in = False
             st.session_state.user_info = None
             st.rerun()
-        # patient_file = st.file_uploader("zip파일 업로드", type="zip")
+        # 파일 경로
         save_dir = tempfile.gettempdir()
-        # os.makedirs(save_dir, exist_ok=True)    # 동명파일이면 덮어씀
-        # if patient_file:
-        #     # ZIP 저장 경로
-        save_path = os.path.join(save_dir, patient_id)
-        #     with open(save_path, "wb") as f:
-        #         f.write(patient_file.getbuffer())
-
-        #     # 압축 해제 경로 (zip 확장자 제거)
-
-            
-        #     # 기존 폴더 있으면 삭제
-        #     if os.path.exists(extract_dir):
-        #         shutil.rmtree(extract_dir)
-        #     os.makedirs(extract_dir, exist_ok=True)
-
-        #     # 압축 해제
-        #     with zipfile.ZipFile(save_path, "r") as zip_ref:
-        #         zip_ref.extractall(extract_dir)
-
-            # st.success(f"압축 해제 완료! 폴더 경로: {extract_dir}")
-            
-            # 압축 해제된 파일 구조 출력 (디버깅용)
-            # def print_directory_structure(path, prefix=""):
-            #     try:
-            #         items = os.listdir(path)
-            #         for item in items:
-            #             item_path = os.path.join(path, item)
-            #             print(f"{prefix}{item}")
-            #             if os.path.isdir(item_path) and len(prefix) < 10:  # 깊이 제한
-            #                 print_directory_structure(item_path, prefix + "  ")
-            #     except:
-            #         pass
-            
-            # print("=== 압축 해제된 파일 구조 ===")
-            # print_directory_structure(extract_dir)
-            # print("=== 파일 구조 끝 ===")
-
-        st.markdown("""
-            <div style='flex-grow: 1;'></div>
-        """, unsafe_allow_html=True)
 
     if 'upload_completed' in st.session_state:
-
-        # import sys
-        # sys.path.append(r'../../db/src')
-        # base_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), '0812')        
-        # base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        
-        # print(base_path)
-        # print("--------------------- extract_dir ---------------------\n\n\n")
-        # print(extract_dir)
-        # print("--------------------- extract_dir ---------------------\n\n\n")
         model_comm, report_main = get_db_modules()
+        # 파일 경로와 목록 정보를 조회
         msg, ret = model_comm.get_file_lst()
-        # print(ret)
-        # # wav_label_pairs = []
-        
         ah_sound_path=[]
         ptk_sound_path=[]
         ltn_rpt_path=[]
@@ -120,24 +68,12 @@ def show_main_interface(patient_id):
         talk_clean_path=[]
         talk_pic_path=[]
         for i in range(len(ret)):
-            # if ret.loc[i, 'Path'].split('/')==extract_dir.split('/')[-1]:
-            # if WINOS == False:
-            # patient_info_str = st.selectbox("환자번호",pd.concat([blnk,all_patient_info['patient_id']]))
             p = Path(str(ret.loc[i, 'Path']))  # 문자열 → Path (OS에 맞게 해석)
-            # print(p)
-            # print("--------------------- p ---------------------\n\n\n")
-
             parts = p.parts
 
             # 환자번호가 경로 어딘가에 있는지부터 확인 (Windows의 드라이브/루트 문제 회피)
             if patient_id not in parts:
                 continue
-
-            # 환자번호가 나타나는 위치를 기준으로 '그 뒤'를 상대 경로로 사용
-            # idx = parts.index(patient_info_str)
-            # 환자번호 이후의 경로(파일명 포함 가능)
-            # tail = Path(*parts[idx+1:])
-
             # ret 쪽 파일명이 tail의 마지막과 일치하는지 확인해 중복 추가 방지
             filename = str(ret.loc[i, 'File Name'])
             # if tail.name == filename:
@@ -250,7 +186,7 @@ def show_main_interface(patient_id):
             # wav_label_pairs.append(t)
 
         if st.session_state.view_mode == "list":
-            show_report_page(patient_info['patient_id'].iloc[0] if not patient_info.empty else '')
+            show_report_page(patient_info['PATIENT_ID'].iloc[0] if not patient_info.empty else '')
         elif st.session_state.view_mode == "clap_a_detail":
             show_clap_a_detail()
         elif st.session_state.view_mode == "clap_d_detail":
@@ -282,7 +218,8 @@ def show_report_page(patient_id):
             st.rerun()
     
     # 리포트 목록
-    reports_df = get_reports(patient_id, st.session_state.selected_filter)
+    model_comm, report_main = get_db_modules()
+    msg, reports_df = report_main.get_report_main(patient_id, st.session_state.selected_filter)
 
     if not reports_df.empty:
         for idx, row in reports_df.iterrows():
@@ -294,32 +231,33 @@ def show_report_page(patient_id):
                 
                 with col2:
                     st.markdown(
-                        f"<div style='line-height: 1.8; font-size: 25px;'><b>{row['검사유형'].replace('_','-')}</b></div>",
+                        f"<div style='line-height: 1.8; font-size: 25px;'><b>{row['ASSESS_TYPE'].replace('_','-')}</b></div>",
                         unsafe_allow_html=True
                     )
                 with col3:
                     st.markdown(
-                        f"<div style='line-height: 1.8; font-size: 20px;'>검사일자 <b>{row['검사일자']}</b></div>",
+                        f"<div style='line-height: 1.8; font-size: 20px;'>검사일자 <b>{row['ASSESS_DATE']}</b></div>",
                         unsafe_allow_html=True
                     )
                 with col4:
                     st.markdown(
-                        f"<div style='line-height: 1.8; font-size: 20px;'>의뢰인 <b>{row['의뢰인']}</b></div>",
+                        f"<div style='line-height: 1.8; font-size: 20px;'>의뢰인 <b>{row['REQUEST_ORG']}</b></div>",
                         unsafe_allow_html=True
                     )                    
                 with col5:
                     st.markdown(
-                        f"<div style='line-height: 1.8; font-size: 20px;'>검사자 <b>{row['검사자']}</b></div>",
+                        f"<div style='line-height: 1.8; font-size: 20px;'>검사자 <b>{row['ASSESS_PERSON']}</b></div>",
                         unsafe_allow_html=True
                     )                    
                 with col7:
                     if st.button("확인하기 〉", key=f"confirm_{idx}"):
                         st.session_state.selected_report = {
-                            'type': row['검사유형'],
-                            'date': row['검사일자'],
-                            'patient_id': row['patient_id']
+                            'type': row['ASSESS_TYPE'],
+                            'date': row['ASSESS_DATE'],
+                            'patient_id': row['PATIENT_ID'],
+                            'order_num': row['ORDER_NUM']
                         }
-                        if row['검사유형'] == "CLAP_A":
+                        if row['ASSESS_TYPE'] == "CLAP_A":
                             st.session_state.view_mode = "clap_a_detail"
                         else:
                             st.session_state.view_mode = "clap_d_detail"
@@ -334,39 +272,41 @@ def show_detail_common():
     st.header(st.session_state.selected_filter.replace('_','-'))
     st.subheader(f"전산화 언어 기능 선별 검사({'실어증' if st.session_state.selected_filter=='CLAP_A' else '마비말장애' if st.session_state.selected_filter=='CLAP_D' else ''}) 결과지")
 
-    # 리포트 데이터 가져오기
-    report = st.session_state.selected_report
-    patient_info = get_reports(report['patient_id']).iloc[0]
+    # 리포트 상세 가져오기
+    model_comm, report_main = get_db_modules()
+    msg, patient_detail = report_main.get_patient_info(st.session_state.selected_report['patient_id'],st.session_state.selected_report['order_num'])
+    # report = st.session_state.selected_report
+    # patient_detail = reports_df.get_patient_info(reports_df['patient_id']).iloc[0]
     # print(patient_info)
     # print("--------------------- patient_info ---------------------\n\n\n")
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.write(f"의뢰 기관(과)/의뢰인 {patient_info['의뢰인']}")
-        st.write(f"이름 {patient_info['name']} ")
-        st.write(f"교육연수 NN")
+        st.write(f"의뢰 기관(과)/의뢰인 {patient_detail['REQUEST_ORG']}")
+        st.write(f"이름 {patient_detail['PATIENT_NAME']} ")
+        st.write(f"교육연수 {patient_detail['EDU']}년")
         st.write(f"방언 NN")
 
     with col2:
-        st.write(f"검사자명 {patient_info['검사자']}")
-        st.write(f"성별 {'여자' if patient_info['sex']==1 else '남자'}")
+        st.write(f"검사자명 {patient_detail['ASSESS_PERSON']}")
+        st.write(f"성별 {'여자' if patient_detail['SEX']==1 else '남자'}")
         st.write(f"문해여부 NN")
-        st.write(f"발병일 NN")
+        st.write(f"발병일 {patient_detail['POST_STROKE_DATE']}")
 
     with col3:
-        st.write(f"검사일자 {patient_info['검사일자']} ")
-        st.write(f"개인번호 {patient_info['patient_id']}")
+        st.write(f"검사일자 {patient_detail['ASSESS_DATE']} ")
+        st.write(f"개인번호 {patient_detail['PATIENT_ID']}")
 
-    st.write(f"진단명 NN")
-    st.write(f"주요 뇌병변 I NN")
-    st.write(f"주요 뇌병변 II NN")
+    st.write(f"진단명 {patient_detail['STROKE_TYPE']}")
+    st.write(f"주요 뇌병변 I {patient_detail['DIAGNOSIS']}")
+    st.write(f"주요 뇌병변 II {patient_detail['DIAGNOSIS_ETC']}")
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.write(f"**편마비** ")
+        st.write(f"**편마비** {patient_detail['HEMIPLEGIA']}")
     with col2:
-        st.write(f"**무시증** ")
+        st.write(f"**무시증** {patient_detail['HEMINEGLECT']}")
     with col3:
-        st.write(f"**시야결손** ")
+        st.write(f"**시야결손** {patient_detail['VISUAL_FIELD_DEFECT']}")
 
     st.write(f"**기타 특이사항** ")
     st.divider()
