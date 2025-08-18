@@ -89,7 +89,7 @@ def show_main_interface(patient_id,df):
             t = file_path
             # print(f"최종 경로: {t}")
             print("--------------------- t ---------------------\n\n\n")
-            sub_path_parts = sub_path.split('/')
+            sub_path_parts = Path(sub_path).parts
             if sub_path_parts[0].lower() == 'clap_d':
                 
                 if sub_path_parts[1] == '0':
