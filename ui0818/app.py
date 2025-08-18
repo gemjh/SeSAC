@@ -81,7 +81,7 @@ def main():
     if not st.session_state.logged_in:
         show_login_page()
     elif st.session_state.upload_completed:
-        show_main_interface(st.session_state.patient_id,st.session_state.path_info) 
+        show_main_interface(st.session_state.patient_id) 
     else:
         BASE_DIR = Path(__file__).parent
         patient_csv = BASE_DIR / "patient_id.csv"
@@ -97,7 +97,6 @@ def main():
                 st.session_state.upload_completed=True
                 st.session_state.patient_id=patient_id
                 st.session_state.path_info=path_info
-                print('\n\n\n\npath_info:',path_info)
                 st.rerun()
 
 if __name__ == "__main__":

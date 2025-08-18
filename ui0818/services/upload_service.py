@@ -121,7 +121,7 @@ def zip_upload(patient_id,uploaded_file,btn_apply):
                                                 rate = wav_file.getframerate()         # 샘플링 레이트 (초당 프레임 수)
                                                 duration = frames / float(rate)        # 총 시간 (초)
                                                 #print(f"{item} Duration: {duration:.2f} seconds, {rate}")
-                                            sql += "('"+patient_id+"', "+str(order_num)+", 'CLAP_A', '"+clap_A_cd.get(clap_a_item)+"', "+item.split('_')[1]+", "+item.split('_')[2][0]+", '"+new_folder_name+"', 'CLAP_A/"+clap_a_item+"', '"+item+"', "+f"{duration:.2f}"+", "+str(rate)+"),\n"
+                                            sql += "('"+patient_id+"', "+str(order_num)+", 'CLAP_A', '"+clap_A_cd.get(clap_a_item)+"', "+item.split('_')[1]+", "+item.split('_')[2][0]+", '"+new_folder_name+"', 'clap_a/"+clap_a_item+"', '"+item+"', "+f"{duration:.2f}"+", "+str(rate)+"),\n"
                                         else:
                                             continue
                             sql = sql[:-2]
@@ -155,7 +155,7 @@ def zip_upload(patient_id,uploaded_file,btn_apply):
                                                 rate = wav_file.getframerate()         # 샘플링 레이트 (초당 프레임 수)
                                                 duration = frames / float(rate)        # 총 시간 (초)
                                                 #print(f"{item} Duration: {duration:.2f} seconds, {rate}")
-                                            sql += "('"+patient_id+"', "+str(order_num)+", 'CLAP_D', '"+clap_D_cd.get(clap_d_item)+"', "+item.split('_')[1]+", "+item.split('_')[2][0]+", '"+new_folder_name+"', 'CLAP_D/"+clap_d_item+"', '"+item+"', "+f"{duration:.2f}"+", "+str(rate)+"),\n"
+                                            sql += "('"+patient_id+"', "+str(order_num)+", 'CLAP_D', '"+clap_D_cd.get(clap_d_item)+"', "+item.split('_')[1]+", "+item.split('_')[2][0]+", '"+new_folder_name+"', 'clap_d/"+clap_d_item+"', '"+item+"', "+f"{duration:.2f}"+", "+str(rate)+"),\n"
                                         else:
                                             continue
                             sql = sql[:-2]

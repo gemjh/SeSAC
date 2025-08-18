@@ -13,7 +13,7 @@ from utils.style_utils import create_evaluation_table_html
 from pathlib import Path
 
 
-def show_main_interface(patient_id,df):
+def show_main_interface(patient_id):
     if st.button("< 뒤로가기"):
         st.session_state.view_mode = "list"
         st.rerun()
@@ -52,13 +52,12 @@ def show_main_interface(patient_id,df):
             st.session_state.user_info = None
             st.rerun()
         # 파일 경로
-        # save_dir = df['MAIN_PATH']
-        # print('\n\n\n',save_dir)
+        save_dir = tempfile.gettempdir()
 
     if 'upload_completed' in st.session_state:
-        # model_comm, report_main = get_db_modules()
+        model_comm, report_main = get_db_modules()
         # 파일 경로와 목록 정보를 조회
-        ret = df[['MAIN_PATH','SUB_PATH','FILE_NAME']]
+        msg, ret = model_comm.get_file_lst()
         ah_sound_path=[]
         ptk_sound_path=[]
         ltn_rpt_path=[]
@@ -69,12 +68,24 @@ def show_main_interface(patient_id,df):
         talk_clean_path=[]
         talk_pic_path=[]
         for i in range(len(ret)):
-            main_path = str(ret.loc[i, 'MAIN_PATH'])
-            sub_path = str(ret.loc[i, 'SUB_PATH'])
-            filename = str(ret.loc[i, 'FILE_NAME'])
-            
-            # upload_folder 기준으로 경로 구성: upload_folder / main_path / sub_path / filename
-            file_path = Path(__file__).parent.parent.parent / "upload_folder" / main_path / sub_path.upper() / filename
+            p = Path(str(ret.loc[i, 'Path']))  # 문자열 → Path (OS에 맞게 해석)
+            parts = p.parts
+
+            # 환자번호가 경로 어딘가에 있는지부터 확인 (Windows의 드라이브/루트 문제 회피)
+            if patient_id not in parts:
+                continue
+            # ret 쪽 파일명이 tail의 마지막과 일치하는지 확인해 중복 추가 방지
+            filename = str(ret.loc[i, 'File Name'])
+            # if tail.name == filename:
+            #     relative_dir = tail.parent        # 이미 파일명이 포함되어 있었으면 디렉토리만
+            # else:
+            #     relative_dir = tail               # 파일명이 포함되지 않았다면 그대로 사용
+
+            # 최종 경로 생성
+            # file_path = Path(extract_dir) / relative_dir / filename
+            extract_dir = os.path.join(save_dir, os.path.splitext(patient_id)[0])
+            print(f'----------------------------- 압축 해제 경로: {extract_dir} -----------------------------\n\n\n')
+            file_path = Path(extract_dir) / Path(*parts) / filename
 
 
             # 필요하다면 문자열로 변환
@@ -84,16 +95,37 @@ def show_main_interface(patient_id,df):
                 # 파일 존재 여부 확인
             if not os.path.exists(file_path):
                 st.warning(f"❌ 파일 없음: {file_path}")
+                # print(f"❌ 파일 없음: {file_path}")
                 break
+
+                # 대안 경로들 시도
+            #     alt_paths = [
+            #         os.path.join(extract_dir, f"{ret.loc[i, 'File Name']}"),  # 최상위 경로
+            #         os.path.join(extract_dir, patient_info_str, relative_path, f"{ret.loc[i, 'File Name']}"),  # 환자번호 포함
+            #     ]
+            #     for alt_path in alt_paths:
+            #         if os.path.exists(alt_path):
+            #             print(f"✅ 대안 경로 발견: {alt_path}")
+            #             file_path = alt_path
+            #             break
+            #     else:
+            #         print(f"❌ 모든 대안 경로 실패 - 스킵")
+            #         continue
+            # else:
+            #     print(f"✅ 파일 발견: {file_path}")
             
-            t = file_path
-            # print(f"최종 경로: {t}")
+            t = (file_path, int(ret.loc[i, 'Score(Refer)']), 0 if ret.loc[i, 'Score(Alloc)'] == None else int(ret.loc[i, 'Score(Alloc)']))
+            print(f"최종 경로: {t[0]}")
             print("--------------------- t ---------------------\n\n\n")
-            sub_path_parts = sub_path.split('/')
-            if sub_path_parts[0].lower() == 'clap_d':
+            # d일때
+            # print(ret.loc[i, 'Path'].split('/')[1])
+            # Path(ret.loc[i, 'Path']).parts[0]==patient_info_str
+            if Path(ret.loc[i, 'Path']).parts[1]=='clap_d':
+                # print(ret.loc[i, 'Path'].split('/')[2])   
+                # print("--------------------- clap_d/? ---------------------\n\n\n")
                 
-                if sub_path_parts[1] == '0':
-                    ah_sound_path.append(t)
+                if (Path(ret.loc[i, 'Path']).parts[2]=='0'):
+                    ah_sound_path.append(t[0])
                     # print(ah_sound_path)
                     # print(ah_sound.analyze_pitch_stability(ah_sound_path[0]))
                     if 'ah_sound_result' not in st.session_state:
@@ -101,39 +133,39 @@ def show_main_interface(patient_id,df):
                         st.session_state.ah_sound_result=ah_sound.analyze_pitch_stability(ah_sound_path[0])
                         # print('-------------- ah_sound modeling(1번째 값) ---------------\n\n\n')
 
-                elif sub_path_parts[1] == '1':
-                    ptk_sound_path.append(t)
+                elif (Path(ret.loc[i, 'Path']).parts[2]=='1'):
+                    ptk_sound_path.append(t[0])
                     if 'ptk_sound_result' not in st.session_state:
                         talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
                         st.session_state.ptk_sound_result=ptk_sound.count_peaks_from_waveform(ptk_sound_path[0])
                     # print('-------------- ptk_sound modeling(1번째 값) ---------------\n\n\n')
-                elif sub_path_parts[1] == '2':
-                    talk_clean_path.append(t)
+                elif (Path(ret.loc[i, 'Path']).parts[2]=='2'):
+                    talk_clean_path.append(t[0])
                     if 'talk_clean_result' not in st.session_state:
                         talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
                         st.session_state.talk_clean_result=talk_clean.main(talk_clean_path[0])
                     # print('-------------- talk_clean modeling(1번째 값) ---------------\n\n\n')
-                elif sub_path_parts[1] == '3':
-                    read_clean_path.append(t)
+                elif (Path(ret.loc[i, 'Path']).parts[2]=='3'):
+                    read_clean_path.append(t[0])
                 # else도 고려?
 
             # a일때
-            elif sub_path_parts[0].lower() == 'clap_a':
-                if sub_path_parts[1] == '3':
-                    ltn_rpt_path.append(t)
-                elif sub_path_parts[1] == '4':
-                    guess_end_path.append(t)
-                elif sub_path_parts[1] == '5':
-                    say_obj_path.append(t)
-                elif sub_path_parts[1] == '6':
-                    say_ani_path.append(t)
-                elif sub_path_parts[1] == '7':
-                    talk_pic_path.append(t)
+            elif (Path(ret.loc[i, 'Path']).parts[1]=='clap_a'):
+                if (Path(ret.loc[i, 'Path']).parts[2]=='3'):
+                    ltn_rpt_path.append(t[0])
+                elif  (Path(ret.loc[i, 'Path']).parts[2]=='4'):
+                    guess_end_path.append(t[0])
+                elif (Path(ret.loc[i, 'Path']).parts[2]=='5'):
+                    say_obj_path.append(t[0])
+                elif (Path(ret.loc[i, 'Path']).parts[2]=='6'):
+                    say_ani_path.append(t[0])
+                elif (Path(ret.loc[i, 'Path']).parts[2]=='7'):
+                    talk_pic_path.append(t[0])
                     if 'talk_pic_result' not in st.session_state:
                         talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
                         st.session_state.talk_pic_result=talk_pic.score_audio(talk_pic_path[0])
                     # print('-------------- talk_pic modeling(1번째 값) ---------------\n\n\n')
-                    talk_pic_path.append(t)
+                    talk_pic_path.append(t[0])
             # print("---------------------  ---------------------\n\n\n")
 
         # print("--------------------- path ---------------------\n\n\n")
@@ -249,32 +281,32 @@ def show_detail_common():
     # print("--------------------- patient_info ---------------------\n\n\n")
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.write(f"의뢰 기관(과)/의뢰인 {patient_detail['REQUEST_ORG'][0]}")
-        st.write(f"이름 {patient_detail['PATIENT_NAME'][0]} ")
-        st.write(f"교육연수 {patient_detail['EDU'][0]}년")
+        st.write(f"의뢰 기관(과)/의뢰인 {patient_detail['REQUEST_ORG']}")
+        st.write(f"이름 {patient_detail['PATIENT_NAME']} ")
+        st.write(f"교육연수 {patient_detail['EDU']}년")
         st.write(f"방언 NN")
 
     with col2:
-        st.write(f"검사자명 {patient_detail['ASSESS_PERSON'][0]}")
-        st.write(f"성별 {'여자' if patient_detail['SEX'][0]==1 else '남자'}")
+        st.write(f"검사자명 {patient_detail['ASSESS_PERSON']}")
+        st.write(f"성별 {'여자' if patient_detail['SEX']==1 else '남자'}")
         st.write(f"문해여부 NN")
-        st.write(f"발병일 {patient_detail['POST_STROKE_DATE'][0]}")
+        st.write(f"발병일 {patient_detail['POST_STROKE_DATE']}")
 
     with col3:
-        st.write(f"검사일자 {patient_detail['ASSESS_DATE'][0]} ")
-        st.write(f"개인번호 {patient_detail['PATIENT_ID'][0]}")
+        st.write(f"검사일자 {patient_detail['ASSESS_DATE']} ")
+        st.write(f"개인번호 {patient_detail['PATIENT_ID']}")
 
-    st.write(f"진단명 {patient_detail['STROKE_TYPE'][0]}")
-    st.write(f"주요 뇌병변 I {patient_detail['DIAGNOSIS'][0]}")
-    st.write(f"주요 뇌병변 II {patient_detail['DIAGNOSIS_ETC'][0]}")
+    st.write(f"진단명 {patient_detail['STROKE_TYPE']}")
+    st.write(f"주요 뇌병변 I {patient_detail['DIAGNOSIS']}")
+    st.write(f"주요 뇌병변 II {patient_detail['DIAGNOSIS_ETC']}")
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.write(f"**편마비** {patient_detail['HEMIPLEGIA'][0]}")
+        st.write(f"**편마비** {patient_detail['HEMIPLEGIA']}")
     with col2:
-        st.write(f"**무시증** {patient_detail['HEMINEGLECT'][0]}")
+        st.write(f"**무시증** {patient_detail['HEMINEGLECT']}")
     with col3:
-        st.write(f"**시야결손** {patient_detail['VISUAL_FIELD_DEFECT'][0]}")
+        st.write(f"**시야결손** {patient_detail['VISUAL_FIELD_DEFECT']}")
 
     st.write(f"**기타 특이사항** ")
     st.divider()

@@ -25,5 +25,5 @@ def get_reports(patient_id, test_type=None):
         
 
     if test_type and test_type != "전체":
-        df = df[df['ASSESS_TYPE'] == test_type]
+        df = df[df['검사유형'] == test_type]
     return df
