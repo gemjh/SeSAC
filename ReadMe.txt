@@ -4,6 +4,6 @@
   - yaml 파일을 통한 가상환경 세팅 및 환경 설정
   - 명령 : conda env create --file environment.yaml
   - 참고 : conda remove --name CLAP_PC --all
-3. 파일 경로 각자 바꾸고(db,models,ui 폴더가 있는 경로여야 함) streamlit run ui/app.py
+3. .env 파일 열어서 base_path 경로 각자 바꾸고(db,models,ui 폴더가 있는 경로여야 함) streamlit run ui/app.py
 4. 로그인
 5. zip 파일 업로드: 환자 한 명의 검사 내용 폴더

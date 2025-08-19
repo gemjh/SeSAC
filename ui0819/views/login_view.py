@@ -19,8 +19,6 @@ def show_login_page():
                         st.session_state.user_info = {'user_id': user_id}
                         st.rerun()
                     else:
-                        print('---------------\n\n',password,'\n\n---------------')
-
                         st.error("로그인 정보가 올바르지 않습니다.")
                 else:
                     st.error("id와 비밀번호를 입력해주세요.")
