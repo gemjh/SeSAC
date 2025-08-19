@@ -7,12 +7,8 @@ TensorFlow Metal 오류 해결 버전
 import sys
 import subprocess
 import os
-
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sympy.logic import true
-
-# 임시로 파일 경로 설정
-# script_dir = os.path.dirname(os.path.abspath(__file__))
-# filepath = os.path.join(script_dir, "p_1_1.wav")
 
 
 if sys.platform.startswith('win'):
@@ -73,12 +69,16 @@ def create_environment():
     env_path = os.path.join(script_dir, "environment.yaml")
     
     try:
-        print("🔧 필수 라이브러리 설치 중...")
+        print("�� 필수 라이브러리 설치 중...")
+        if WINOS:
+            conda_cmd = os.path.join(conda_base, "Scripts", "conda.exe")
+        else:
+            conda_cmd = os.path.join(conda_base, "bin", "conda")
         subprocess.run(
-        ["conda", "env", "create", "--file", env_path],
-        check=True
+            [conda_cmd, "env", "create", "-f", env_path],
+            check=True
         )
-        print("✅ 생성 완료")
+        print("생성 완료")
         return True
         
     except subprocess.CalledProcessError as e:
@@ -116,10 +116,10 @@ def activate_conda_environment():
                     print("환경 생성에 실패했습니다.")
                     sys.exit(1)
             
-            print(f"🔄 CLAP_PC 환경으로 전환 중...")
-            # 원래 실행된 스크립트를 CLAP_PC 환경에서 재실행
-            original_script = sys.argv[0]  # 원래 실행된 파일 (app.py)
-            subprocess.run([sesac_python] + sys.argv)
+            print(f"CLAP_PC 환경에서 재실행: {sesac_python}")
+            # streamlit 앱을 CLAP_PC 환경에서 재실행
+            app_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "app.py")
+            subprocess.run([sesac_python, "-m", "streamlit", "run", app_path] + sys.argv[1:])
             sys.exit(0)
         else:
             print("✅ CLAP_PC 환경이 활성화되어 있습니다.")

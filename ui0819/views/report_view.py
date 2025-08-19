@@ -14,9 +14,9 @@ from pathlib import Path
 
 
 def show_main_interface(patient_id,df):
-    if st.button("< 뒤로가기"):
-        st.session_state.view_mode = "list"
-        st.rerun()
+    # if st.button("< 뒤로가기"):
+    #     st.session_state.view_mode = "list"
+    #     st.rerun()
     # 사이드바
     with st.sidebar:
         st.title("👋 CLAP")
@@ -90,27 +90,29 @@ def show_main_interface(patient_id,df):
             # print(f"최종 경로: {t}")
             print("--------------------- t ---------------------\n\n\n")
             sub_path_parts = Path(sub_path).parts
+            talk_pic, ah_sound, ptk_sound, talk_clean, say_ani,ltn_rpt = get_model_modules()
             if sub_path_parts[0].lower() == 'clap_d':
+                
                 
                 if sub_path_parts[1] == '0':
                     ah_sound_path.append(t)
                     # print(ah_sound_path)
                     # print(ah_sound.analyze_pitch_stability(ah_sound_path[0]))
                     if 'ah_sound_result' not in st.session_state:
-                        talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
+                        # talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
                         st.session_state.ah_sound_result=ah_sound.analyze_pitch_stability(ah_sound_path[0])
                         # print('-------------- ah_sound modeling(1번째 값) ---------------\n\n\n')
 
                 elif sub_path_parts[1] == '1':
                     ptk_sound_path.append(t)
                     if 'ptk_sound_result' not in st.session_state:
-                        talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
+                        # talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
                         st.session_state.ptk_sound_result=ptk_sound.count_peaks_from_waveform(ptk_sound_path[0])
                     # print('-------------- ptk_sound modeling(1번째 값) ---------------\n\n\n')
                 elif sub_path_parts[1] == '2':
                     talk_clean_path.append(t)
                     if 'talk_clean_result' not in st.session_state:
-                        talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
+                        # talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
                         st.session_state.talk_clean_result=talk_clean.main(talk_clean_path[0])
                     # print('-------------- talk_clean modeling(1번째 값) ---------------\n\n\n')
                 elif sub_path_parts[1] == '3':
@@ -121,37 +123,24 @@ def show_main_interface(patient_id,df):
             elif sub_path_parts[0].lower() == 'clap_a':
                 if sub_path_parts[1] == '3':
                     ltn_rpt_path.append(t)
+                    if 'ltn_rpt_result' not in st.session_state:
+                        st.session_state.ltn_rpt_result=ltn_rpt.predict_score(ltn_rpt_path[0])
                 elif sub_path_parts[1] == '4':
                     guess_end_path.append(t)
                 elif sub_path_parts[1] == '5':
                     say_obj_path.append(t)
                 elif sub_path_parts[1] == '6':
                     say_ani_path.append(t)
+                    if 'say_ani_result' not in st.session_state:
+                        st.session_state.say_ani_result=say_ani.score_audio(say_ani_path[0])
                 elif sub_path_parts[1] == '7':
                     talk_pic_path.append(t)
                     if 'talk_pic_result' not in st.session_state:
-                        talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
+                        # talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
                         st.session_state.talk_pic_result=talk_pic.score_audio(talk_pic_path[0])
                     # print('-------------- talk_pic modeling(1번째 값) ---------------\n\n\n')
                     talk_pic_path.append(t)
-            # print("---------------------  ---------------------\n\n\n")
 
-        # print("--------------------- path ---------------------\n\n\n")
-        # print('------------------------- 모델링 구간 ---------------------------\n\n\n')
-
-        # path_names = [
-        #     'ah_sound', 'ptk_sound', 'talk_clean', 'read_clean',
-        #     'ltn_rpt', 'guess_end', 'say_obj', 'say_ani', 'talk_pic'
-        # ]
-        # path_codes=['clap_d/0','clap_d/1','clap_d/2','clap_d/3','clap_a/3','clap_a/4','clap_a/5','clap_a/6','clap_a/7']
-        
-        # with st.spinner('모델 로딩 중...'):
-            
-
-        # print('------------------------- 모델링 완료 ---------------------------\n\n\n')
-
-
-            # wav_label_pairs.append(t)
 
         if st.session_state.view_mode == "list":
             show_report_page(patient_info['PATIENT_ID'].iloc[0] if not patient_info.empty else '')
@@ -237,6 +226,9 @@ def show_report_page(patient_id):
 
 
 def show_detail_common():
+    if st.button("< 뒤로가기"):
+        st.session_state.view_mode = "list"
+        st.rerun()
     st.header(st.session_state.selected_filter.replace('_','-'))
     st.subheader(f"전산화 언어 기능 선별 검사({'실어증' if st.session_state.selected_filter=='CLAP_A' else '마비말장애' if st.session_state.selected_filter=='CLAP_D' else ''}) 결과지")
 
@@ -291,6 +283,7 @@ def show_clap_a_detail():
     if not clap_a_data.empty:
         st.subheader("결과 요약")
         st.write('그림보고 말하기:',st.session_state.talk_pic_result,'점')
+        st.write('동물 이름 말하기:',st.session_state.say_ani_result,'점')
         # 차트
 
 
