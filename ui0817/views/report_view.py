@@ -74,7 +74,7 @@ def show_main_interface(patient_id,df):
             filename = str(ret.loc[i, 'FILE_NAME'])
             
             # upload_folder 기준으로 경로 구성: upload_folder / main_path / sub_path / filename
-            file_path = Path(__file__).parent.parent.parent / "upload_folder" / main_path / sub_path.upper() / filename
+            file_path = Path(__file__).parent.parent.parent / "upload" / "files" / main_path / sub_path.upper() / filename
 
 
             # 필요하다면 문자열로 변환

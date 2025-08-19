@@ -7,6 +7,13 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_NUM_INTEROP_THREADS'] = '1'
 os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
 
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+# import env_utils as set_env
+# set_env.activate_conda_environment()
 import streamlit as st
 from views.login_view import show_login_page
 from views.report_view import show_main_interface, show_report_page, show_clap_a_detail, show_clap_d_detail, show_detail_common
@@ -19,9 +26,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import pandas as pd
 import plotly.express as px
 import streamlit.components.v1 as components
@@ -62,7 +66,6 @@ from utils.style_utils import (
 from services.auth_service import authenticate_user
 
 from services.upload_service import zip_upload
-import utils.env_utils as set_env
 
 apply_custom_css()
 

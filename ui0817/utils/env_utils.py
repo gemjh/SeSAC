@@ -59,10 +59,10 @@ def find_conda_base():
     return None
 
 
-def create_environment(env_name="CLAP_PC", python_version=3.9):
+def create_environment():
     """conda 환경 자동 생성"""
     print("환경이 없습니다. 자동으로 생성합니다...")
-    script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    script_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     conda_base = find_conda_base()
     if not conda_base:
         print("❌ conda가 설치되어 있지 않습니다.")
@@ -73,12 +73,12 @@ def create_environment(env_name="CLAP_PC", python_version=3.9):
     env_path = os.path.join(script_dir, "environment.yaml")
     
     try:
-        print("�� 필수 라이브러리 설치 중...")
+        print("🔧 필수 라이브러리 설치 중...")
         subprocess.run(
-            ["conda", "env", "create", "-f", env_path],
-            check=True
+        ["conda", "env", "create", "--file", env_path],
+        check=True
         )
-        print("생성 완료")
+        print("✅ 생성 완료")
         return True
         
     except subprocess.CalledProcessError as e:
@@ -112,13 +112,14 @@ def activate_conda_environment():
             # SeSAC 환경이 있는지 확인
             if not os.path.exists(sesac_python):
                 # SeSAC 환경이 없으면 생성
-                if not create_environment("CLAP_PC"):
+                if not create_environment():
                     print("환경 생성에 실패했습니다.")
                     sys.exit(1)
             
-            print(f"CLAP_PC 환경에서 재실행: {sesac_python}")
-            # 현재 스크립트를 SeSAC 환경에서 재실행
-            subprocess.run([sesac_python, __file__] + sys.argv[1:])
+            print(f"🔄 CLAP_PC 환경으로 전환 중...")
+            # 원래 실행된 스크립트를 CLAP_PC 환경에서 재실행
+            original_script = sys.argv[0]  # 원래 실행된 파일 (app.py)
+            subprocess.run([sesac_python] + sys.argv)
             sys.exit(0)
         else:
             print("✅ CLAP_PC 환경이 활성화되어 있습니다.")
@@ -143,4 +144,4 @@ def delete_conda_environment(env_name=''):
         sys.exit(1)
 
 # conda 환경 자동 활성화 실행
-activate_conda_environment()
+# activate_conda_environment()

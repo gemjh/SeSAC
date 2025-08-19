@@ -10,7 +10,7 @@ def show_login_page():
         
         with st.form("login_form"):
             user_id = st.text_input("id", placeholder="user")
-            password = st.text_input("비밀번호", type="password", placeholder="d")
+            password = st.text_input("비밀번호", type="password", placeholder="1")
             
             if st.form_submit_button("로그인", use_container_width=True):
                 if user_id and password:
@@ -19,8 +19,10 @@ def show_login_page():
                         st.session_state.user_info = {'user_id': user_id}
                         st.rerun()
                     else:
+                        print('---------------\n\n',password,'\n\n---------------')
+
                         st.error("로그인 정보가 올바르지 않습니다.")
                 else:
                     st.error("id와 비밀번호를 입력해주세요.")
         
-        st.info("데모 계정 - id: user, 비밀번호: d")
+        st.info("데모 계정 - id: user, 비밀번호: 1")

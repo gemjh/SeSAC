@@ -1,4 +1,7 @@
 import pandas as pd
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 def get_db_modules():
     from db.src import model_comm, report_main
     return model_comm, report_main
