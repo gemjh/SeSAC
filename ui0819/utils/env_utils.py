@@ -112,11 +112,7 @@ def activate_conda_environment():
             # SeSAC 환경이 있는지 확인
             if not os.path.exists(sesac_python):
                 # SeSAC 환경이 없으면 생성
-<<<<<<< HEAD
                 if not create_environment():
-=======
-                if not create_environment("CLAP_PC"):
->>>>>>> b148839b947b2f7e314ed7c53ea2a471cdcec446
                     print("환경 생성에 실패했습니다.")
                     sys.exit(1)
             
@@ -148,8 +144,4 @@ def delete_conda_environment(env_name=''):
         sys.exit(1)
 
 # conda 환경 자동 활성화 실행
-<<<<<<< HEAD
 # activate_conda_environment()
-=======
-activate_conda_environment()
->>>>>>> b148839b947b2f7e314ed7c53ea2a471cdcec446

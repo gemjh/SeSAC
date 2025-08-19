@@ -20,6 +20,6 @@ FLUSH PRIVILEGES;
         a. Import form Dump Project Folder의 경로를 db/data 경로로 지정
         b. Select Database Objects to Import에서 clap을 선택
         c. 하단의 Start Import 버튼을 클릭하여 데이터를 import 한다.
-5. 파일 경로 각자 바꾸고(db,models,ui 폴더가 있는 경로여야 함) streamlit run ui/app.py
+5. base_path(파일 경로) 각자 바꾸고(db,models,ui 폴더가 있는 경로여야 함) streamlit run ui/app.py
 6. 로그인
 7. zip 파일 업로드: 환자 한 명의 검사 내용 폴더

@@ -84,7 +84,10 @@ def prepare_wave(wav_path):
 
 def predict_score(wav_path):
     mel_batch, token_batch = prepare_wave(wav_path)
-    model = load_model('model_ltn_rpt.keras') 
+    model_path = os.path.join(os.path.dirname(__file__), 'model_ltn_rpt.keras')
+    print(f"모델 경로: {model_path}")
+    print(f"파일 존재 여부: {os.path.exists(model_path)}")
+    model = load_model(model_path) 
 
     # ========== 예측 ==========
     preds = model.predict({'mel_input': mel_batch, 'token_input': token_batch})

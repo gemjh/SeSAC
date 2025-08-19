@@ -56,6 +56,8 @@ def show_main_interface(patient_id,df):
         # print('\n\n\n',save_dir)
 
     if 'upload_completed' in st.session_state:
+        spinner = st.spinner('모델링 중...')
+        spinner.__enter__()
         # model_comm, report_main = get_db_modules()
         # 파일 경로와 목록 정보를 조회
         ret = df[['MAIN_PATH','SUB_PATH','FILE_NAME']]
@@ -81,13 +83,13 @@ def show_main_interface(patient_id,df):
             load_dotenv(dotenv_path=env_path)
             base_path = os.getenv("base_path")
             
-            file_path = os.path.join(base_path, "upload", "files", main_path, sub_path, filename)
+            file_path = os.path.join(base_path, main_path, sub_path.upper(), filename)
 
 
             # 필요하다면 문자열로 변환
             file_path = str(file_path)
-            print(file_path)
-            print("--------------------- file_path ---------------------\n\n\n")
+            # print(file_path)
+            # print("--------------------- file_path ---------------------\n\n\n")
                 # 파일 존재 여부 확인
             if not os.path.exists(file_path):
                 st.warning(f"❌ 파일 없음: {file_path}")
@@ -95,11 +97,11 @@ def show_main_interface(patient_id,df):
             
             t = file_path
             # print(f"최종 경로: {t}")
-            print("--------------------- t ---------------------\n\n\n")
+            # print("--------------------- t ---------------------\n\n\n")
             sub_path_parts = Path(sub_path).parts
             talk_pic, ah_sound, ptk_sound, talk_clean, say_ani,ltn_rpt = get_model_modules()
             if sub_path_parts[0].lower() == 'clap_d':
-                talk_pic, ah_sound, ptk_sound, talk_clean, say_ani = get_model_modules()
+                # talk_pic, ah_sound, ptk_sound, talk_clean, say_ani,ltn_rpt = get_model_modules()
                 
                 
                 if sub_path_parts[1] == '0':
@@ -131,8 +133,12 @@ def show_main_interface(patient_id,df):
             elif sub_path_parts[0].lower() == 'clap_a':
                 if sub_path_parts[1] == '3':
                     ltn_rpt_path.append(t)
+                    print('------------------\n\n',ltn_rpt_path,'------------------\n\n')
+
                     if 'ltn_rpt_result' not in st.session_state:
-                        st.session_state.ltn_rpt_result=ltn_rpt.predict_score(ltn_rpt_path[0])
+                        # ltn_rpt.predict_score(t) 은 리스트를 파라미터로 받아야 하는데 원소를 받고있어서 에러
+                        st.session_state.ltn_rpt_result=ltn_rpt.predict_score([t])
+                    print('------------------\n\n',t,'------------------\n\n')
                 elif sub_path_parts[1] == '4':
                     guess_end_path.append(t)
                 elif sub_path_parts[1] == '5':
@@ -151,14 +157,20 @@ def show_main_interface(patient_id,df):
                     talk_pic_path.append(t)
 
 
-        if st.session_state.view_mode == "list":
-            show_report_page(patient_info['PATIENT_ID'].iloc[0] if not patient_info.empty else '')
-        elif st.session_state.view_mode == "clap_a_detail":
-            show_clap_a_detail()
-        elif st.session_state.view_mode == "clap_d_detail":
-            show_clap_d_detail()
-            # 환자 정보 표시
-            st.divider()
+        if st.session_state.current_page == "리포트":
+            if st.session_state.view_mode == "list":
+                show_report_page(patient_info['PATIENT_ID'].iloc[0] if not patient_info.empty else '')
+            elif st.session_state.view_mode == "clap_a_detail":
+                show_clap_a_detail()
+            elif st.session_state.view_mode == "clap_d_detail":
+                show_clap_d_detail()
+                # 환자 정보 표시
+                st.divider()
+        else:
+            st.markdown("### 🐱 개발 중이니 고양이나 보세요!")
+            st.image("https://cataas.com/cat?width=500&height=400", caption="매번 다른 고양이를 만나보세요!")
+        spinner.__exit__(None, None, None)
+    
     else:
         st.info("zip파일과 환자 번호를 모두 선택해 주세요")
         # patient_info_str = '선택'

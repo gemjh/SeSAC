@@ -57,15 +57,6 @@ if sys.platform.startswith('win'):
     print("현재 운영체제는 윈도우입니다.")
 else: WINOS = False
 
-# ------------------- db 폴더 경로 통일하려고 씀, 최종적으로는 삭제 필요 -------------------
-# project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# sys.path.insert(0, os.path.join(os.path.dirname(project_root), '0812'))
-
-# 동적 import를 위해 모듈들을 함수 안에서 import
-
-
-
-        # st.session_state.loading_all_ok = True
 from services.db_service import (
     get_reports
 )
@@ -109,30 +100,33 @@ def main():
         # confirm_btn=st.button("확인")
         # if confirm_btn:
         uploaded_file = st.file_uploader("폴더를 압축(zip)한 파일을 업로드하세요.", type=['zip'])
-        btn_apply=st.button("업로드 스킵")
-        if btn_apply & ('patient_id' in st.session_state):
-            # DB에서 path_info 조회
-            conn = get_connection()
-            cursor = conn.cursor()
-            sql = 'SELECT MAX(ORDER_NUM) FROM assess_lst WHERE PATIENT_ID = %s'
-            cursor.execute(sql, (patient_id,))
-            order_num = cursor.fetchone()[0]
-            
-            sql = "SELECT A.PATIENT_ID,A.ORDER_NUM,A.ASSESS_TYPE,A.QUESTION_CD,A.QUESTION_NO,A.MAIN_PATH,A.SUB_PATH,A.FILE_NAME FROM ASSESS_FILE_LST A, CODE_MAST C WHERE C.CODE_TYPE = 'ASSESS_TYPE' AND A.ASSESS_TYPE = C.MAST_CD AND A.QUESTION_CD=C.SUB_CD AND A.PATIENT_ID = %s AND A.ORDER_NUM = %s ORDER BY A.ASSESS_TYPE, C.ORDER_NUM, A.QUESTION_NO"
-            cursor.execute(sql, (str(patient_id), str(order_num)))
-            rows = cursor.fetchall()
-            st.session_state.path_info = pd.DataFrame(rows, columns=['PATIENT_ID','ORDER_NUM','ASSESS_TYPE','QUESTION_CD','QUESTION_NO','MAIN_PATH','SUB_PATH','FILE_NAME'])
-            cursor.close()
-            conn.close()
-            st.session_state.upload_completed=True
-            st.rerun()
-        if uploaded_file is not None:
-            btn_apply = st.button("파일 업로드")
-            if btn_apply:
-                path_info=zip_upload(patient_id,uploaded_file,btn_apply)
+        col1, col2, col3 = st.columns([1, 1, 8])
+        with col1:
+            btn_apply=st.button("업로드 스킵")
+            if btn_apply & ('patient_id' in st.session_state):
+                # DB에서 path_info 조회
+                conn = get_connection()
+                cursor = conn.cursor()
+                sql = 'SELECT MAX(ORDER_NUM) FROM assess_lst WHERE PATIENT_ID = %s'
+                cursor.execute(sql, (patient_id,))
+                order_num = cursor.fetchone()[0]
+                
+                sql = "SELECT A.PATIENT_ID,A.ORDER_NUM,A.ASSESS_TYPE,A.QUESTION_CD,A.QUESTION_NO,A.MAIN_PATH,A.SUB_PATH,A.FILE_NAME FROM ASSESS_FILE_LST A, CODE_MAST C WHERE C.CODE_TYPE = 'ASSESS_TYPE' AND A.ASSESS_TYPE = C.MAST_CD AND A.QUESTION_CD=C.SUB_CD AND A.PATIENT_ID = %s AND A.ORDER_NUM = %s ORDER BY A.ASSESS_TYPE, C.ORDER_NUM, A.QUESTION_NO"
+                cursor.execute(sql, (str(patient_id), str(order_num)))
+                rows = cursor.fetchall()
+                st.session_state.path_info = pd.DataFrame(rows, columns=['PATIENT_ID','ORDER_NUM','ASSESS_TYPE','QUESTION_CD','QUESTION_NO','MAIN_PATH','SUB_PATH','FILE_NAME'])
+                cursor.close()
+                conn.close()
                 st.session_state.upload_completed=True
-                st.session_state.path_info=path_info
                 st.rerun()
+        with col2:
+            if uploaded_file is not None:
+                btn_apply = st.button("파일 업로드")
+                if btn_apply:
+                    path_info=zip_upload(patient_id,uploaded_file,btn_apply)
+                    st.session_state.upload_completed=True
+                    st.session_state.path_info=path_info
+                    st.rerun()
 
 
 
