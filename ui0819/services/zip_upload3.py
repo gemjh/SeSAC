@@ -1,20 +1,3 @@
-# #################################################### #
-# ZIP_UPLOAD : programming by joon0
-# 
-# [History]
-# 2025.07.30    : 개발 시작 
-#                 streamlit에 폴더 업로드 기능을 지원하지 않는 것을 확인
-#                 개발 방향 : wave 파일을 폴더 채로 압축해서 업로드를 하고, 압축을 해제하여 wave 파일 정보를 읽어 DB 테이블에 저장
-# 2025.08.11~14 : 1. 변경된 디렉토리 구조에 대해 조회하여 파일 정보 가져오기
-#                 2. 중복 문제가 있는 경우 minor 번호가 작은 것을 use_yn = ‘N’으로 반영
-#                 3. ASSESS_SCORE 테이블에 데이터 입력
-# 2025.08.18~19 : 1. 환자 정보 파일(csv)을 읽어 assess_lst 테이블에 저장 추가
-#                 2. env에 base_path 적용 ⇒ 파일 업로드 실행시 파일을 저장하는 폴더를 고정
-#                 3. 파일 저장 경로를 files/upload로 지정, 
-#                 4. logging 적용
-# #################################################### #
-
-
 from dotenv import load_dotenv
 from pathlib import Path
 import os
@@ -28,7 +11,7 @@ import pandas as pd
 import re
 
 
-env_path = Path(__file__).parent.parent.parent / ".env"
+env_path = Path("__file__").parent / ".env"
 load_dotenv(dotenv_path=env_path)
 base_path = os.getenv("base_path")
 

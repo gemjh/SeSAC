@@ -73,8 +73,15 @@ def show_main_interface(patient_id,df):
             sub_path = str(ret.loc[i, 'SUB_PATH'])
             filename = str(ret.loc[i, 'FILE_NAME'])
             
-            # upload_folder 기준으로 경로 구성: upload_folder / main_path / sub_path / filename
-            file_path = Path(__file__).parent.parent.parent / "upload" / "files" / main_path / sub_path.upper() / filename
+            # base_path 기준으로 경로 구성: base_path / upload / files / main_path / sub_path / filename
+            from dotenv import load_dotenv
+            from pathlib import Path as EnvPath
+            import os
+            env_path = EnvPath(__file__).parent.parent.parent / ".env"
+            load_dotenv(dotenv_path=env_path)
+            base_path = os.getenv("base_path")
+            
+            file_path = os.path.join(base_path, "upload", "files", main_path, sub_path, filename)
 
 
             # 필요하다면 문자열로 변환
@@ -92,6 +99,7 @@ def show_main_interface(patient_id,df):
             sub_path_parts = Path(sub_path).parts
             talk_pic, ah_sound, ptk_sound, talk_clean, say_ani,ltn_rpt = get_model_modules()
             if sub_path_parts[0].lower() == 'clap_d':
+                talk_pic, ah_sound, ptk_sound, talk_clean, say_ani = get_model_modules()
                 
                 
                 if sub_path_parts[1] == '0':
@@ -132,6 +140,7 @@ def show_main_interface(patient_id,df):
                 elif sub_path_parts[1] == '6':
                     say_ani_path.append(t)
                     if 'say_ani_result' not in st.session_state:
+                        # talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
                         st.session_state.say_ani_result=say_ani.score_audio(say_ani_path[0])
                 elif sub_path_parts[1] == '7':
                     talk_pic_path.append(t)

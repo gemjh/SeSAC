@@ -5,7 +5,6 @@
   - 명령 : conda env create --file environment.yaml
   - 참고 : conda remove --name CLAP_PC --all
 3. MySQL 8.0 설치
-
 4. DB 초기 설정
     - MySQL 워크벤치를 실행하여 root로 접속한다.
    
