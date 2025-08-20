@@ -79,12 +79,11 @@ def show_main_interface(patient_id,df):
             from dotenv import load_dotenv
             from pathlib import Path as EnvPath
             import os
-            env_path = EnvPath(__file__).parent.parent.parent / ".env"
-            load_dotenv(dotenv_path=env_path)
             base_path = os.getenv("base_path")
+            env_path = os.path.join(base_path, ".env")
+            load_dotenv(dotenv_path=env_path)
             
-            file_path = os.path.join(base_path, main_path, sub_path.upper(), filename)
-
+            file_path = os.path.join(base_path, 'files','upload',main_path, sub_path.upper(), filename)
 
             # 필요하다면 문자열로 변환
             file_path = str(file_path)
@@ -142,6 +141,10 @@ def show_main_interface(patient_id,df):
                 elif sub_path_parts[1] == '4':
                     guess_end_path.append(t)
                 elif sub_path_parts[1] == '5':
+                    if 'say_obj_result' not in st.session_state:
+                        # talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
+                        st.session_state.say_obj_result=say_obj.predict_total_say_obj(say_obj_path[0])                    
+                    
                     say_obj_path.append(t)
                 elif sub_path_parts[1] == '6':
                     say_ani_path.append(t)

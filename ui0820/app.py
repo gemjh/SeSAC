@@ -1,5 +1,4 @@
 import streamlit as st
-
 # 페이지 설정
 st.set_page_config(
     page_title="CLAP",
@@ -9,22 +8,17 @@ st.set_page_config(
 )
 import os
 # TensorFlow 설정 (import 전에 먼저 설정)
-os.environ['DISABLE_MLCOMPUTE'] = '1'
-os.environ['TF_DISABLE_MKL'] = '1'
-os.environ['TF_METAL'] = '0'
-os.environ['TF_DISABLE_SEGMENT_REDUCTION_OP_DETERMINISM_EXCEPTIONS'] = '1'
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_NUM_INTEROP_THREADS'] = '1'
 os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from utils.env_utils import activate_conda_environment
+# from utils.env_utils import activate_conda_environment
 
 spinner = st.spinner('환경 설정 중...')
 spinner.__enter__()
-activate_conda_environment()
+# activate_conda_environment()
 from views.login_view import show_login_page
 from views.report_view import show_main_interface, show_report_page, show_clap_a_detail, show_clap_d_detail, show_detail_common
 from services.db_service import get_db_modules
@@ -44,7 +38,7 @@ import torch
 try:
     import tensorflow as tf
 except Exception as e:
-    print(f"Metal TensorFlow 로드 실패, CPU 전용으로 fallback: {e}")
+    print(f"TensorFlow 로드 실패, CPU 전용으로 fallback: {e}")
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
     os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'false'
     import tensorflow as tf

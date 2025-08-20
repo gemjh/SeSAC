@@ -18,15 +18,24 @@ else: WINOS = False
 
 
 # TensorFlow 설정 (import 전에 설정)
-os.environ['DISABLE_MLCOMPUTE'] = '1'
-os.environ['TF_METAL'] = '0'
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_NUM_INTEROP_THREADS'] = '1'
 os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
 
 def find_conda_base():
     """conda 설치 경로 찾기"""
+    if WINOS:
+        win_conda_paths = [
+            os.path.expanduser("~\\anaconda3"),
+            os.path.expanduser("~\\miniconda3"),
+            "C:\\Users\\user\\anaconda3",
+            "C:\\ProgramData\\Anaconda3",
+            "C:\\ProgramData\\Miniconda3"
+        ]
+        for conda_base in win_conda_paths:
+            if os.path.exists(os.path.join(conda_base, "Scripts", "conda.exe")):
+                return conda_base
+        return None
     possible_conda_paths = [
         os.path.expanduser("~/opt/anaconda3"),
         os.path.expanduser("~/miniconda3"), 
@@ -34,19 +43,6 @@ def find_conda_base():
         "/opt/anaconda3",
         "/opt/miniconda3"
     ]
-
-    if WINOS:
-        win_conda_paths = [
-            os.path.expanduser("~/anaconda3"),
-            os.path.expanduser("~/miniconda3"),
-            "C:/Users/user/anaconda3",
-            "C:/ProgramData/Anaconda3",
-            "C:/ProgramData/Miniconda3"
-        ]
-        for conda_base in win_conda_paths:
-            if os.path.exists(os.path.join(conda_base, "Scripts", "conda.exe")):
-                return conda_base
-        return None
     
     for conda_base in possible_conda_paths:
         if os.path.exists(os.path.join(conda_base, "bin", "conda")):
