@@ -14,11 +14,11 @@ os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-# from utils.env_utils import activate_conda_environment
+from utils.env_utils import activate_conda_environment
 
 spinner = st.spinner('환경 설정 중...')
 spinner.__enter__()
-# activate_conda_environment()
+activate_conda_environment()
 from views.login_view import show_login_page
 from views.report_view import show_main_interface, show_report_page, show_clap_a_detail, show_clap_d_detail, show_detail_common
 from services.db_service import get_db_modules
@@ -63,7 +63,7 @@ from utils.style_utils import (
 from services.auth_service import authenticate_user
 
 from services.upload_service import zip_upload, get_connection
-import utils.env_utils as set_env
+
 spinner.__exit__(None, None, None)
 
 apply_custom_css()

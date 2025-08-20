@@ -75,6 +75,7 @@ def predict_total_say_obj(rainbow_wav_path, swing_wav_path):
     return total_score_pred
 
 # 사용 예:
-# say_obj_score = predict_total_say_obj(
-#     "/path/to/p_6_0.wav", "/path/to/p_9_0.wav"
-# )
+say_obj_score = predict_total_say_obj(
+    "/Volumes/SSAM/project/files/upload/1001/CLAP_A/5/p_6_0.wav", "/Volumes/SSAM/project/files/upload/1001/CLAP_A/5/p_9_0.wav"
+)
+print(say_obj_score)

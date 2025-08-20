@@ -6,7 +6,7 @@ dependencies:
   - python=3.10
   - pip
   - ffmpeg
-  - numpy
+  - numpy=2.0.2
   - pandas
   - scikit-learn
   - matplotlib
@@ -19,8 +19,8 @@ dependencies:
       - tensorflow-hub==0.16.1
       - torch==2.8.0
       - torchaudio==2.8.0
-      - transformers==4.46.3
-      - librosa==0.10.2
+      - transformers==4.55.2
+      - librosa==0.11.0
       - soundfile==0.12.1
       - openai-whisper>=20231117
       - mysql-connector-python==9.1.0
@@ -29,3 +29,5 @@ dependencies:
       - sympy==1.13.3
       - pydub==0.25.1
       - python-dotenv==1.1.1
+
+    

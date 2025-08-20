@@ -14,9 +14,6 @@ from pathlib import Path
 
 
 def show_main_interface(patient_id,df):
-    # if st.button("< 뒤로가기"):
-    #     st.session_state.view_mode = "list"
-    #     st.rerun()
     # 사이드바
     with st.sidebar:
         st.title("👋 CLAP")
@@ -38,7 +35,7 @@ def show_main_interface(patient_id,df):
         if 'selected_filter' not in st.session_state:
             st.session_state.selected_filter = "CLAP_A"
         patient_info=get_reports(patient_id)
-        if patient_info is not None:
+        if patient_info is not None and len(patient_info) > 0:
             st.write(f"**{patient_info['PATIENT_NAME'].iloc[0]} {patient_info['AGE'].iloc[0]}세**")
             st.write(f"환자번호: {patient_info['PATIENT_ID'].iloc[0]}")
             st.write(f"성별: {'여성' if patient_info['SEX'].iloc[0]==1 else '남성'}")
@@ -74,16 +71,19 @@ def show_main_interface(patient_id,df):
             main_path = str(ret.loc[i, 'MAIN_PATH'])
             sub_path = str(ret.loc[i, 'SUB_PATH'])
             filename = str(ret.loc[i, 'FILE_NAME'])
+            if sys.platform.startswith('win'):
+                sub_path.replace('/','\\')
             
             # base_path 기준으로 경로 구성: base_path / upload / files / main_path / sub_path / filename
             from dotenv import load_dotenv
             from pathlib import Path as EnvPath
             import os
-            base_path = os.getenv("base_path")
-            env_path = os.path.join(base_path, ".env")
+            env_path = EnvPath(__file__).parent.parent.parent / ".env"
             load_dotenv(dotenv_path=env_path)
+            base_path = os.getenv("base_path")
             
             file_path = os.path.join(base_path, 'files','upload',main_path, sub_path.upper(), filename)
+
 
             # 필요하다면 문자열로 변환
             file_path = str(file_path)
@@ -98,7 +98,7 @@ def show_main_interface(patient_id,df):
             # print(f"최종 경로: {t}")
             # print("--------------------- t ---------------------\n\n\n")
             sub_path_parts = Path(sub_path).parts
-            talk_pic, ah_sound, ptk_sound, talk_clean, say_ani,ltn_rpt = get_model_modules()
+            talk_pic, ah_sound, ptk_sound, talk_clean, say_ani,ltn_rpt,say_obj = get_model_modules()
             if sub_path_parts[0].lower() == 'clap_d':
                 # talk_pic, ah_sound, ptk_sound, talk_clean, say_ani,ltn_rpt = get_model_modules()
                 
@@ -114,9 +114,7 @@ def show_main_interface(patient_id,df):
 
                 elif sub_path_parts[1] == '1':
                     ptk_sound_path.append(t)
-                    if 'ptk_sound_result' not in st.session_state:
-                        # talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
-                        st.session_state.ptk_sound_result=ptk_sound.count_peaks_from_waveform(ptk_sound_path[0])
+
                     # print('-------------- ptk_sound modeling(1번째 값) ---------------\n\n\n')
                 elif sub_path_parts[1] == '2':
                     talk_clean_path.append(t)
@@ -132,19 +130,13 @@ def show_main_interface(patient_id,df):
             elif sub_path_parts[0].lower() == 'clap_a':
                 if sub_path_parts[1] == '3':
                     ltn_rpt_path.append(t)
-                    print('------------------\n\n',ltn_rpt_path,'------------------\n\n')
+                    # print('------------------\n\n',ltn_rpt_path,'------------------\n\n')
 
-                    if 'ltn_rpt_result' not in st.session_state:
-                        # ltn_rpt.predict_score(t) 은 리스트를 파라미터로 받아야 하는데 원소를 받고있어서 에러
-                        st.session_state.ltn_rpt_result=ltn_rpt.predict_score([t])
-                    print('------------------\n\n',t,'------------------\n\n')
+
+                    # print('------------------\n\n',t,'------------------\n\n')
                 elif sub_path_parts[1] == '4':
                     guess_end_path.append(t)
                 elif sub_path_parts[1] == '5':
-                    if 'say_obj_result' not in st.session_state:
-                        # talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
-                        st.session_state.say_obj_result=say_obj.predict_total_say_obj(say_obj_path[0])                    
-                    
                     say_obj_path.append(t)
                 elif sub_path_parts[1] == '6':
                     say_ani_path.append(t)
@@ -158,8 +150,22 @@ def show_main_interface(patient_id,df):
                         st.session_state.talk_pic_result=talk_pic.score_audio(talk_pic_path[0])
                     # print('-------------- talk_pic modeling(1번째 값) ---------------\n\n\n')
                     talk_pic_path.append(t)
-
-
+            # if 'say_obj_result' not in st.session_state:
+            #     # talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
+            #     st.session_state.say_obj_result=say_obj.predict_total_say_obj(say_obj_path[5],say_obj_path[8])  
+        # print('------------------say_obj_path\n\n',say_obj_path,'------------------\n\n')
+        if 'ltn_rpt_result' not in st.session_state:
+            # ltn_rpt.predict_score(t) 은 리스트를 파라미터로 받아야 하는데 원소를 받고있어서 에러
+            st.session_state.ltn_rpt_result=ltn_rpt.predict_score(ltn_rpt_path)        
+        if 'say_obj_result' not in st.session_state:
+            # ltn_rpt.predict_score(t) 은 리스트를 파라미터로 받아야 하는데 원소를 받고있어서 에러
+            st.session_state.say_obj_result=say_obj.predict_total_say_obj(say_obj_path[5],say_obj_path[8])      
+        if 'ptk_sound_result' not in st.session_state:
+            # talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
+            st.session_state.ptk_sound_result
+            for i in range(len(ptk_sound_path),1,3):
+                ptk_sound.count_peaks_from_waveform(ptk_sound_path[i])
+                print('------------------i\n\n',i,'------------------\n\n')
         if st.session_state.current_page == "리포트":
             if st.session_state.view_mode == "list":
                 show_report_page(patient_info['PATIENT_ID'].iloc[0] if not patient_info.empty else '')
@@ -308,6 +314,8 @@ def show_clap_a_detail():
         st.subheader("결과 요약")
         st.write('그림보고 말하기:',st.session_state.talk_pic_result,'점')
         st.write('동물 이름 말하기:',st.session_state.say_ani_result,'점')
+        st.write('물건 이름 말하기:',st.session_state.say_obj_result,'점')
+        st.write('듣고 따라 말하기:',st.session_state.ltn_rpt_result,'점')
         # 차트
 
 
@@ -322,81 +330,81 @@ def show_clap_d_detail():
     if not clap_d_data.empty:
         st.subheader("결과 요약")
 
-        st.write('아 소리내기:',st.session_state.ah_sound_result)
+        st.write('아 소리내기:',round(st.session_state.ah_sound_result,2))
         st.write('퍼터커 소리내기:',st.session_state.ptk_sound_result)
         st.write('또박또박 말하기:',st.session_state.talk_clean_result)
-        word_level,sentence_level,consonant_word,vowel_word,consonant_sentence='N','N','N','N','N'
-        max_time,pa_avg,ta_avg,ka_avg,ptk_avg='N','N','N','N','N'
-        total_score = 'N'
+        # word_level,sentence_level,consonant_word,vowel_word,consonant_sentence='N','N','N','N','N'
+        # max_time,pa_avg,ta_avg,ka_avg,ptk_avg='N','N','N','N','N'
+        # total_score = 'N'
         # total_score = a_sound + pa_repeat + ta_repeat + ka_repeat + ptk_repeat + word_level + sentence_level
 
-        # ----------------------  임시 DB   ----------------
-        evaluation_data = [
-            {
-                'id': 'a_sound',
-                'title': "'아' 소리내기",
-                'summary': "최대 발성 시간 NN 초 총점 NN 점",
-                'items': [
-                    {'no': '연습', 'content': "'아'"},
-                    {'no': '1', 'content': "1회차 '아'"},
-                    {'no': '', 'content': "2회차 '아'"}
-                ]
-            },
-            {
-                'id': 'pa_sound',
-                'title': "'퍼' 반복하기",
-                'summary': "평균 횟수 NN 번 총점 NN 점",
-                'items': [
-                    {'no': '연습', 'content': "'퍼'"},
-                    {'no': '1', 'content': "1회차 '퍼'"},
-                    {'no': '', 'content': "2회차 '퍼'"},
-                    {'no': '', 'content': "3회차 '퍼'"}
-                ]
-            },
-            {
-                'id': 'ta_sound',
-                'title': "'터' 반복하기",
-                'summary': "평균 횟수 NN 번 총점 NN 점",
-                'items': [
-                    {'no': '연습', 'content': "'터'"},
-                    {'no': '1', 'content': "1회차 '터'"},
-                    {'no': '', 'content': "2회차 '터'"},
-                    {'no': '', 'content': "3회차 '터'"}
-                ]
-            },
-            {
-                'id': 'ka_sound',
-                'title': "'커' 반복하기",
-                'summary': "평균 횟수 NN 번 총점 NN 점",
-                'items': [
-                    {'no': '연습', 'content': "'커'"},
-                    {'no': '1', 'content': "1회차 '커'"},
-                    {'no': '', 'content': "2회차 '커'"},
-                    {'no': '', 'content': "3회차 '커'"}
-                ]
-            },
-            {
-                'id': 'ptk_sound',
-                'title': "'퍼터커' 반복하기",
-                'summary': "평균 횟수 NN 번 총점 NN 점",
-                'items': [
-                    {'no': '연습', 'content': "'퍼터커'"},
-                    {'no': '1', 'content': "1회차 '퍼터커'"},
-                    {'no': '', 'content': "2회차 '퍼터커'"},
-                    {'no': '', 'content': "3회차 '퍼터커'"}
-                ]
-            }
-        ]
-        # --------------------------------------
+        # # ----------------------  임시 DB   ----------------
+        # evaluation_data = [
+        #     {
+        #         'id': 'a_sound',
+        #         'title': "'아' 소리내기",
+        #         'summary': "최대 발성 시간 NN 초 총점 NN 점",
+        #         'items': [
+        #             {'no': '연습', 'content': "'아'"},
+        #             {'no': '1', 'content': "1회차 '아'"},
+        #             {'no': '', 'content': "2회차 '아'"}
+        #         ]
+        #     },
+        #     {
+        #         'id': 'pa_sound',
+        #         'title': "'퍼' 반복하기",
+        #         'summary': "평균 횟수 NN 번 총점 NN 점",
+        #         'items': [
+        #             {'no': '연습', 'content': "'퍼'"},
+        #             {'no': '1', 'content': "1회차 '퍼'"},
+        #             {'no': '', 'content': "2회차 '퍼'"},
+        #             {'no': '', 'content': "3회차 '퍼'"}
+        #         ]
+        #     },
+        #     {
+        #         'id': 'ta_sound',
+        #         'title': "'터' 반복하기",
+        #         'summary': "평균 횟수 NN 번 총점 NN 점",
+        #         'items': [
+        #             {'no': '연습', 'content': "'터'"},
+        #             {'no': '1', 'content': "1회차 '터'"},
+        #             {'no': '', 'content': "2회차 '터'"},
+        #             {'no': '', 'content': "3회차 '터'"}
+        #         ]
+        #     },
+        #     {
+        #         'id': 'ka_sound',
+        #         'title': "'커' 반복하기",
+        #         'summary': "평균 횟수 NN 번 총점 NN 점",
+        #         'items': [
+        #             {'no': '연습', 'content': "'커'"},
+        #             {'no': '1', 'content': "1회차 '커'"},
+        #             {'no': '', 'content': "2회차 '커'"},
+        #             {'no': '', 'content': "3회차 '커'"}
+        #         ]
+        #     },
+        #     {
+        #         'id': 'ptk_sound',
+        #         'title': "'퍼터커' 반복하기",
+        #         'summary': "평균 횟수 NN 번 총점 NN 점",
+        #         'items': [
+        #             {'no': '연습', 'content': "'퍼터커'"},
+        #             {'no': '1', 'content': "1회차 '퍼터커'"},
+        #             {'no': '', 'content': "2회차 '퍼터커'"},
+        #             {'no': '', 'content': "3회차 '퍼터커'"}
+        #         ]
+        #     }
+        # ]
+        # # --------------------------------------
         
-        # 평가 리스트
-        a_sound, pa_sound, ta_sound, ka_sound, ptk_sound = evaluation_data
+        # # 평가 리스트
+        # a_sound, pa_sound, ta_sound, ka_sound, ptk_sound = evaluation_data
         
-        evaluation_list = [a_sound, pa_sound, ta_sound, ka_sound, ptk_sound]
+        # evaluation_list = [a_sound, pa_sound, ta_sound, ka_sound, ptk_sound]
 
-        # for문으로 각 평가 테이블 생성
-        for eval_item in evaluation_list:
-            html_content = create_evaluation_table_html(eval_item)
-            # st.components.v1.html 사용 - 높이는 항목 수에 따라 동적으로 계산
-            height = 150 + (len(eval_item['items']) * 35)  # 기본 높이 + 각 행당 35px
-            components.html(html_content, height=height)
+        # # for문으로 각 평가 테이블 생성
+        # for eval_item in evaluation_list:
+        #     html_content = create_evaluation_table_html(eval_item)
+        #     # st.components.v1.html 사용 - 높이는 항목 수에 따라 동적으로 계산
+        #     height = 150 + (len(eval_item['items']) * 35)  # 기본 높이 + 각 행당 35px
+        #     components.html(html_content, height=height)
