@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # #################################################### #
 # model_comm : programming by joon0
 # 
@@ -8,6 +9,8 @@
 #   2. delete_score 개발 (환자의 평가 점수 삭제)
 # #################################################### #
 
+=======
+>>>>>>> f465ff9b77135e54adb90192ede995e5f5d9e76f
 from dotenv import load_dotenv
 from pathlib import Path
 import os
@@ -26,6 +29,7 @@ def get_connection():
     )
     return conn
 
+<<<<<<< HEAD
 def is_invalid(value):
     return pd.isna(value) or value == ""
 
@@ -34,6 +38,11 @@ def is_invalid(value):
 # 파일 경로와 목록 정보를 조회
 # ####################################### #
 def get_file_lst(assess_type, question_cd, question_no=None, order_num=None):
+=======
+
+# 파일 경로와 목록 정보를 조회
+def get_file_lst(question_no=None, order_num=None):
+>>>>>>> f465ff9b77135e54adb90192ede995e5f5d9e76f
     conn = None
     cursor = None
     try:
@@ -60,8 +69,11 @@ def get_file_lst(assess_type, question_cd, question_no=None, order_num=None):
         sql +=  "		on lst.ASSESS_TYPE = alc.ASSESS_TYPE "
         sql +=  "		and lst.QUESTION_CD = alc.QUESTION_CD "
         sql +=  "		and lst.QUESTION_NO = alc.QUESTION_NO "
+<<<<<<< HEAD
         sql += f"where lst.ASSESS_TYPE = '{assess_type}' "
         sql += f"and lst.QUESTION_CD = '{question_cd}' "
+=======
+>>>>>>> f465ff9b77135e54adb90192ede995e5f5d9e76f
         if question_no:
             sql += f"and lst.QUESTION_NO = {question_no} "
         if order_num:
@@ -83,6 +95,7 @@ def get_file_lst(assess_type, question_cd, question_no=None, order_num=None):
             cursor.close()
         if conn:
             conn.close()
+<<<<<<< HEAD
 
 
 # ####################################### #
@@ -178,3 +191,5 @@ def delete_score(patient_id, order_num):
             cursor.close()
         if conn:
             conn.close()
+=======
+>>>>>>> f465ff9b77135e54adb90192ede995e5f5d9e76f

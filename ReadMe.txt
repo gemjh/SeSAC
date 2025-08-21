@@ -10,10 +10,17 @@
    
     - DB 스키마 및 사용자 생성과 권한 부여
       * Query 창에 다음의 sql을 복사하여 실행한다.
+<<<<<<< HEAD
       CREATE DATABASE clap CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
       CREATE USER 'clapuser'@'%' IDENTIFIED BY '00000000';
       GRANT ALL PRIVILEGES ON clap.* TO 'clapuser'@'%';
       FLUSH PRIVILEGES;
+=======
+CREATE DATABASE clap CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+CREATE USER 'clapuser'@'%' IDENTIFIED BY '00000000';
+GRANT ALL PRIVILEGES ON clap.* TO 'clapuser'@'%';
+FLUSH PRIVILEGES;
+>>>>>>> f465ff9b77135e54adb90192ede995e5f5d9e76f
 
     - DB IMPORT
       * Server > DB Import를 실행

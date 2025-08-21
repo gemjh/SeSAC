@@ -1,12 +1,16 @@
 # MacOS 시스템 파일
 .DS_Store
 ._*
+Thumbs.db
 
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyc
+*.pyo
+*.pyd
 .Python
 build/
 develop-eggs/
@@ -31,27 +35,75 @@ wheels/
 .env.test.local
 .env.production.local
 
+# Virtual environments
+.venv/
+env/
+venv/
+*_env/
+streamlit_env/
+
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# 데이터베이스
+# 데이터베이스 파일들
 *.db
+*.sqlite
 *.sqlite3
 
-
-# 로그 파일
+# 로그 파일들
 *.log
 
-# 모델 파일 (크기가 클 수 있음)
-*.h5
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# 오디오 및 비디오 파일들
+*.m4a
+*.mp4
+*.mp3
+*.wav
+*.avi
+*.mov
+*.mkv
+*.flv
+*.webm
+*.ogg
+*.aac
+*.flac
+
+# 이미지 파일들 (큰 파일들)
+*.tiff
+*.tif
+*.bmp
+*.raw
+*.psd
+
+# 압축 파일들
+*.zip
+*.rar
+*.7z
+*.tar.gz
+*.tar.bz2
+
+# 모델 파일들 (큰 파일들)
 *.keras
+*.h5
 *.pkl
 *.joblib
+*.pb
+variables/
 
 # 임시 파일
 tmp/
 temp/
+.tmp/
 files/
+
+# 중복 프로젝트 폴더들
+project/
+
+# 불필요한 실행 파일들
+*.exe
