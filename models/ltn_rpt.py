@@ -96,10 +96,7 @@ def predict_score(wav_path):
     score = 0.0
     for i, p in enumerate(preds):
         # print(f"[{i}] Predicted: {p[0]:.4f}, score : {p[0]*point[i%10]:.1f} ({point[i%10]:.1f})")
-<<<<<<< HEAD
         # print(i,p)
-=======
->>>>>>> f465ff9b77135e54adb90192ede995e5f5d9e76f
         score += p[0]*point[i]
 
     return int(score)

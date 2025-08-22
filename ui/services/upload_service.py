@@ -12,6 +12,7 @@
 #                 2. env에 base_path 적용 ⇒ 파일 업로드 실행시 파일을 저장하는 폴더를 고정
 #                 3. 파일 저장 경로를 files/upload로 지정, 
 #                 4. logging 적용
+# 2025.08.22    : 1. 퍼터커 코드 분리로 수정
 # #################################################### #
 
 from dotenv import load_dotenv
@@ -35,6 +36,10 @@ load_dotenv(dotenv_path=env_path)
 base_path = os.getenv("base_path")
 logging.debug("[base_path] %s", base_path)
 
+#
+clap_A_cd = {'3':'LTN_RPT', '4':'GUESS_END', '5':'SAY_OBJ', '6':'SAY_ANI', '7':'TALK_PIC'}
+clap_D_cd = {'0':'AH_SOUND', '1':'PTK_SOUND', '2':'TALK_CLEAN', '3':'READ_CLEAN'}
+clap_D_pkt_cd = {1:'P_SOUND', 2:'T_SOUND', 3:'K_SOUND', 4:'PTK_SOUND'}  # '퍼터커'인 경우에 사용 (25.08.22)
 
 def get_connection():
     conn = mysql.connector.connect(
@@ -52,6 +57,7 @@ def get_connection():
 # uploaded_file = st.file_uploader("폴더를 압축(zip)한 파일을 업로드하세요.", type=['zip'])
 
 # btn_apply = st.button("파일 업로드")
+
 def zip_upload(btn_apply,patient_id,uploaded_file):
     if btn_apply & (patient_id is not None) & (uploaded_file is not None):
         logging.info("[START] zip upload ")
@@ -115,9 +121,7 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
             target_path = os.path.join(upload_path, new_folder_name)
             logging.debug("[target_path] %s", target_path)
 
-            #
-            clap_A_cd = {'3':'LTN_RPT', '4':'GUESS_END', '5':'SAY_OBJ', '6':'SAY_ANI', '7':'TALK_PIC'}
-            clap_D_cd = {'0':'AH_SOUND', '1':'PTK_SOUND', '2':'TALK_CLEAN', '3':'READ_CLEAN'}
+
 
             # 폴더 밑에 있는 파일 정보를 DB에 저장
             path_blitem = target_path
@@ -137,7 +141,7 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
                             pattern = r'^-?\d+(\.\d+)?$' # 숫자 패턴 체크용
                             sql = 'insert into assess_lst (PATIENT_ID, ORDER_NUM, REQUEST_ORG, ASSESS_DATE, ASSESS_PERSON, AGE, EDU, EXCLUDED, POST_STROKE_DATE, DIAGNOSIS, DIAGNOSIS_ETC, STROKE_TYPE, LESION_LOCATION, HEMIPLEGIA, HEMINEGLECT, VISUAL_FIELD_DEFECT) value \n'
                             for idx in range(len(df)):
-                                patient_id = df.loc[idx, 'number']
+                                #csv_patient_id = df.loc[idx, 'number']
                                 request_org = df.loc[idx, '대상기관']
                                 request_org = f"'{str(request_org)[:10]}'" if not pd.isna(request_org) else 'null'
                                 assess_date = df.loc[idx, '검사일자']
@@ -218,8 +222,9 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
                                                 rate = wav_file.getframerate()         # 샘플링 레이트 (초당 프레임 수)
                                                 duration = frames / float(rate)        # 총 시간 (초)
                                                 #print(f"{item} Duration: {duration:.2f} seconds, {rate}")
-                                            spl_item = item.split('_')
+
                                             #sql += "('"+f"{patient_id}"+"', "+str(order_num)+", 'CLAP_A', '"+clap_A_cd.get(clap_a_item)+"', "+item.split('_')[1]+", "+item.split('_')[2][0]+", '"+upload_path+"/"+new_folder_name+"', 'CLAP_A/"+clap_a_item+"', '"+item+"', "+f"{duration:.2f}"+", "+f"{rate}"+"),\n"
+                                            spl_item = item.split('_')
                                             sql += f"('{patient_id}', {order_num}, 'CLAP_A', '{clap_A_cd.get(clap_a_item)}', {spl_item[1]}, {spl_item[2][0]}, '{new_folder_name}', '{slitem}/{clap_a_item}', '{item}', {duration:.2f}, {rate}),\n"
                                         else:
                                             continue
@@ -242,7 +247,7 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
                             for clap_d_item in clap_d_lst:
                                 path_clap_d_item = os.path.join(target_path, slitem, clap_d_item)
                                 if os.path.isdir(path_clap_d_item) & (clap_D_cd.get(clap_d_item) != None):
-
+                                    
                                     # 파일 목록을 가져와 p_로 시작하는 파일 정보만 등록
                                     clap_d_sub_lst = os.listdir(path_clap_d_item)
 
@@ -254,11 +259,19 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
                                                 rate = wav_file.getframerate()         # 샘플링 레이트 (초당 프레임 수)
                                                 duration = frames / float(rate)        # 총 시간 (초)
                                                 #print(f"{item} Duration: {duration:.2f} seconds, {rate}")
-                                            spl_item = item.split('_')
                                             #sql += "('"+f"{patient_id}"+"', "+str(order_num)+", 'CLAP_D', '"+clap_D_cd.get(clap_d_item)+"', "+item.split('_')[1]+", "+item.split('_')[2][0]+", '"+upload_path+"/"+new_folder_name+"', 'CLAP_D/"+clap_d_item+"', '"+item+"', "+f"{duration:.2f}"+", "+f"{rate}"+"),\n"
-                                            sql += f"('{patient_id}', {order_num}, 'CLAP_D', '{clap_D_cd.get(clap_d_item)}', {spl_item[1]}, {spl_item[2][0]}, '{new_folder_name}', '{slitem}/{clap_d_item}', '{item}', {duration:.2f}, {rate}),\n"
+                                            spl_item = item.split('_')
+
+                                            if clap_d_item != '1': # '퍼터커'가 아닌 경우 (25.08.22)
+                                                sql += f"('{patient_id}', {order_num}, 'CLAP_D', '{clap_D_cd.get(clap_d_item)}', {spl_item[1]}, {spl_item[2][0]}, '{new_folder_name}', '{slitem}/{clap_d_item}', '{item}', {duration:.2f}, {rate}),\n"
+                                            else: # '퍼터커'인 경우
+                                                pkt_idx = int((int(spl_item[1])+2)/3)
+                                                sql += f"('{patient_id}', {order_num}, 'CLAP_D', '{clap_D_pkt_cd.get(pkt_idx)}', {spl_item[1]}, {spl_item[2][0]}, '{new_folder_name}', '{slitem}/{clap_d_item}', '{item}', {duration:.2f}, {rate}),\n"
+
                                         else:
                                             continue
+
+
                             sql = sql[:-2]
                             #print(sql)
                             try:
@@ -344,9 +357,9 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
                 finally:
                     pass
 
-                # 저장한 파일 정보를 조회
+                # # 저장한 파일 정보를 조회
                 try:
-                    st.subheader("저장한 파일 정보 조회")
+                #     st.subheader("저장한 파일 정보 조회")
                     sql = "SELECT A.PATIENT_ID,A.ORDER_NUM,A.ASSESS_TYPE,A.QUESTION_CD,A.QUESTION_NO,A.MAIN_PATH,A.SUB_PATH,A.FILE_NAME \n"
                     sql += "FROM ASSESS_FILE_LST A, CODE_MAST C \n"
                     sql += "WHERE C.CODE_TYPE = 'ASSESS_TYPE' AND A.ASSESS_TYPE = C.MAST_CD AND A.QUESTION_CD=C.SUB_CD AND A.PATIENT_ID = %s AND A.ORDER_NUM = %s \n"
@@ -355,10 +368,10 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
                     cursor.execute(sql, (str(patient_id), str(order_num)))
                     rows = cursor.fetchall()
                     df = pd.DataFrame(rows, columns=['PATIENT_ID','ORDER_NUM','ASSESS_TYPE','QUESTION_CD','QUESTION_NO','MAIN_PATH','SUB_PATH','FILE_NAME'])
-                    st.dataframe(df)
+                #     st.dataframe(df)
                 except Exception as e:
                     logging.error("[Exception] 저장한 파일 정보 조회 중 오류 발생: %s", e)
-                    # conn.rollback()  # 오류 발생 시 롤백
+
 
                 # DB 연결 종료
                 cursor.close()        
@@ -366,4 +379,3 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
 
         logging.info("-"*30)
     return df
-    

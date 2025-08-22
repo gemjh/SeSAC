@@ -1,3 +1,4 @@
+from project.ui.views import results_objectives_view
 import streamlit as st
 from views.login_view import show_login_page
 from services.db_service import get_db_modules,get_reports
@@ -53,10 +54,11 @@ def show_main_interface(patient_id,df):
         # print('\n\n\n',save_dir)
 
     if 'upload_completed' in st.session_state:
-        spinner = st.spinner('모델링 중...')
+        spinner = st.spinner('평가 중...')
         spinner.__enter__()
         # model_comm, report_main = get_db_modules()
         # 파일 경로와 목록 정보를 조회
+        print('\n\n\ndf',df)
         ret = df[['MAIN_PATH','SUB_PATH','FILE_NAME']]
         ah_sound_path=[]
         ptk_sound_path=[]
@@ -118,9 +120,6 @@ def show_main_interface(patient_id,df):
                     # print('-------------- ptk_sound modeling(1번째 값) ---------------\n\n\n')
                 elif sub_path_parts[1] == '2':
                     talk_clean_path.append(t)
-                    if 'talk_clean_result' not in st.session_state:
-                        # talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
-                        st.session_state.talk_clean_result=talk_clean.main(talk_clean_path[0])
                     # print('-------------- talk_clean modeling(1번째 값) ---------------\n\n\n')
                 elif sub_path_parts[1] == '3':
                     read_clean_path.append(t)
@@ -148,19 +147,20 @@ def show_main_interface(patient_id,df):
                         st.session_state.talk_pic_result=talk_pic.score_audio(talk_pic_path[0])
                     # print('-------------- talk_pic modeling(1번째 값) ---------------\n\n\n')
                     talk_pic_path.append(t)
-
+        if 'talk_clean_result' not in st.session_state:
+            # talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
+            st.session_state.talk_clean_result=talk_clean.main(talk_clean_path)
         if 'guess_end_result' not in st.session_state:
             st.session_state.guess_end_result=[]
             infer = GuessEndInferencer(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "models", "guess_end_model.keras"))
             for idx,p in enumerate(guess_end_path):
                 st.session_state.guess_end_result.append(infer.predict_guess_end(p,idx))
-                print('-----------------guess_end_result\n\n\n',st.session_state.guess_end_result,'-----------------\n\n\n')
+                # print('-----------------guess_end_result\n\n\n',st.session_state.guess_end_result,'-----------------\n\n\n')
             
         if 'ltn_rpt_result' not in st.session_state:
             # ltn_rpt.predict_score(t) 은 리스트를 파라미터로 받아야 하는데 원소를 받고있어서 에러
             st.session_state.ltn_rpt_result=ltn_rpt.predict_score(ltn_rpt_path)
         if 'say_obj_result' not in st.session_state:
-            # ltn_rpt.predict_score(t) 은 리스트를 파라미터로 받아야 하는데 원소를 받고있어서 에러
             st.session_state.say_obj_result=say_obj.predict_total_say_obj(say_obj_path[5],say_obj_path[8])      
         if 'ptk_sound_result' not in st.session_state:
             # talk_pic, ah_sound, ptk_sound, talk_clean = get_model_modules()
@@ -318,8 +318,9 @@ def show_clap_a_detail():
         st.write('동물 이름 말하기:',st.session_state.say_ani_result,'점')
         st.write('물건 이름 말하기:',st.session_state.say_obj_result,'점')
         st.write('듣고 따라 말하기:',st.session_state.ltn_rpt_result,'점')
-        st.write('끝말 맞추기:',st.session_state.guess_end_result,'점')
+        st.write('끝말 맞추기:',sum(st.session_state.guess_end_result),'점')
         # 차트
+        # results_objectives_view.show_results_objectives_page()
 
 
 def show_clap_d_detail():

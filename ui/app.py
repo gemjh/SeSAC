@@ -15,6 +15,15 @@ os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from utils.env_utils import activate_conda_environment
+
+spinner = st.spinner('환경 설정 중...')
+spinner.__enter__()
+activate_conda_environment()
+
 # MPS 완전 비활성화
 import torch
 torch.backends.mps.is_available = lambda: False
@@ -30,14 +39,7 @@ def patched_isin(elements, test_elements, **kwargs):
         test_elements = test_elements.cpu()
     return original_isin(elements, test_elements, **kwargs)
 torch.isin = patched_isin
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from utils.env_utils import activate_conda_environment
 
-spinner = st.spinner('환경 설정 중...')
-spinner.__enter__()
-activate_conda_environment()
 from views.login_view import show_login_page
 from views.report_view import show_main_interface, show_report_page, show_clap_a_detail, show_clap_d_detail, show_detail_common
 from services.db_service import get_db_modules
@@ -115,8 +117,8 @@ def main():
         uploaded_file = st.file_uploader("폴더를 압축(zip)한 파일을 업로드하세요.", type=['zip'])
         col1, col2, col3 = st.columns([2.5, 2.5, 5])
         with col1:
-            btn_apply=st.button("업로드 스킵")
-            if btn_apply & ('patient_id' in st.session_state):
+            btn_skip=st.button("업로드 스킵")
+            if btn_skip & ('patient_id' in st.session_state):
                 # DB에서 path_info 조회
                 conn = get_connection()
                 cursor = conn.cursor()
@@ -135,8 +137,10 @@ def main():
         with col2:
             if uploaded_file is not None:
                 btn_apply = st.button("파일 업로드", key="upload_btn")
+                print('-\n\n\n',uploaded_file,'-\n\n\n')
+
                 if btn_apply:
-                    path_info=zip_upload(patient_id,uploaded_file,btn_apply)
+                    path_info=zip_upload(btn_apply,patient_id,uploaded_file)
                     st.session_state.upload_completed=True
                     st.session_state.path_info=path_info
                     st.rerun()
