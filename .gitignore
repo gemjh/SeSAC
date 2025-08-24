@@ -1,0 +1,21 @@
+# Large model files
+*.keras
+*.pkl
+models/
+
+# System files
+$RECYCLE.BIN/
+System Volume Information/
+*.DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Temporary files
+*.tmp
+*.temp
