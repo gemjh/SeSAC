@@ -1,0 +1,425 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLAP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e90ff, #00bfff);
+            height: 100vh;
+            color: white;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 200px;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-menu {
+            flex: 1;
+        }
+
+        .nav-item {
+            padding: 15px 0;
+            cursor: pointer;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            padding-left: 10px;
+            transition: background 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            font-weight: bold;
+        }
+
+        .user-info {
+            margin-top: auto;
+            padding: 10px 10px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            background: rgba(100, 100, 100, 0.2);
+        }
+
+        .user-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .user-id {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .user-gender {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 15px;
+        }
+
+        .logout-btn {
+            background: rgba(255, 255, 255, 0);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .tab.inactive {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .tab.active {
+            background: white;
+            color: #1e90ff;
+            font-weight: bold;
+        }
+
+        .print-btn {
+            background: none;
+            border: 2px solid white;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .report-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .report-item {
+            background: rgba(100, 100, 100, 0.1);
+            margin-bottom: 10px;
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+            transition: background 0.2s;
+        }
+
+        .report-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .report-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex: 1;
+        }
+
+        .checkbox {
+            width: 18px;
+            height: 18px;
+            accent-color: white;
+        }
+
+        .report-title {
+            font-weight: bold;
+            font-size: 16px;
+            min-width: 80px;
+        }
+
+        .report-details {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+        }
+
+        .detail-item {
+            display: flex;
+            gap: 5px;
+        }
+
+        .detail-label {
+            opacity: 0.8;
+        }
+
+        .detail-value {
+            font-weight: 500;
+        }
+
+        .confirm-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .confirm-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .arrow {
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="logo">
+                👋 CLAP
+            </div>
+            
+            <div class="nav-menu">
+                <div class="nav-item">평가</div>
+                <div class="nav-item">채혈</div>
+                <div class="nav-item active">• 리포트</div>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-name">박충북 62세</div>
+                <div class="user-id">01258472</div>
+                <div class="user-gender">남</div>
+            </div>
+            <button class="logout-btn">로그아웃</button>
+        </div>
+        
+        <div class="main-content">
+            <div class="header">
+                <div class="tabs">
+                    <div class="tab inactive">CLAP-A</div>
+                    <div class="tab active">CLAP-D</div>
+                </div>
+                <button class="print-btn">🖨</button>
+            </div>
+            
+            <div class="report-list">
+                <div class="report-item">
+                    <div class="report-info">
+                        <input type="checkbox" class="checkbox">
+                        <div class="report-title">CLAP-D</div>
+                        <div class="report-details">
+                            <div class="detail-item">
+                                <span class="detail-label">검사일자</span>
+                                <span class="detail-value">2024.10.16</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">의뢰인</span>
+                                <span class="detail-value">충북대병원(RM) / 공현호</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">검사자</span>
+                                <span class="detail-value">백동재</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="confirm-btn">
+                        확인하기 <span class="arrow">〉</span>
+                    </button>
+                </div>
+                
+                <div class="report-item">
+                    <div class="report-info">
+                        <input type="checkbox" class="checkbox">
+                        <div class="report-title">CLAP-D</div>
+                        <div class="report-details">
+                            <div class="detail-item">
+                                <span class="detail-label">검사일자</span>
+                                <span class="detail-value">2024.10.16</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">의뢰인</span>
+                                <span class="detail-value">충북대병원(RM) / 공현호</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">검사자</span>
+                                <span class="detail-value">백동재</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="confirm-btn">
+                        확인하기 <span class="arrow">〉</span>
+                    </button>
+                </div>
+                
+                <div class="report-item">
+                    <div class="report-info">
+                        <input type="checkbox" class="checkbox">
+                        <div class="report-title">CLAP-D</div>
+                        <div class="report-details">
+                            <div class="detail-item">
+                                <span class="detail-label">검사일자</span>
+                                <span class="detail-value">2024.10.16</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">의뢰인</span>
+                                <span class="detail-value">충북대병원(RM) / 공현호</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">검사자</span>
+                                <span class="detail-value">백동재</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="confirm-btn">
+                        확인하기 <span class="arrow">〉</span>
+                    </button>
+                </div>
+                
+                <div class="report-item">
+                    <div class="report-info">
+                        <input type="checkbox" class="checkbox">
+                        <div class="report-title">CLAP-D</div>
+                        <div class="report-details">
+                            <div class="detail-item">
+                                <span class="detail-label">검사일자</span>
+                                <span class="detail-value">2024.10.16</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">의뢰인</span>
+                                <span class="detail-value">충북대병원(RM) / 공현호</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">검사자</span>
+                                <span class="detail-value">백동재</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="confirm-btn">
+                        확인하기 <span class="arrow">〉</span>
+                    </button>
+                </div>
+                
+                <div class="report-item">
+                    <div class="report-info">
+                        <input type="checkbox" class="checkbox">
+                        <div class="report-title">CLAP-D</div>
+                        <div class="report-details">
+                            <div class="detail-item">
+                                <span class="detail-label">검사일자</span>
+                                <span class="detail-value">2024.10.16</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">의뢰인</span>
+                                <span class="detail-value">충북대병원(RM) / 공현호</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">검사자</span>
+                                <span class="detail-value">백동재</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="confirm-btn">
+                        확인하기 <span class="arrow">〉</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 탭 클릭 이벤트
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => {
+                    t.classList.remove('active');
+                    t.classList.add('inactive');
+                });
+                this.classList.remove('inactive');
+                this.classList.add('active');
+            });
+        });
+
+        // 확인하기 버튼 클릭 이벤트
+        document.querySelectorAll('.confirm-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                alert('리포트 상세보기 페이지로 이동합니다.');
+            });
+        });
+
+        // 네비게이션 메뉴 클릭 이벤트
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // 로그아웃 버튼 클릭 이벤트
+        document.querySelector('.logout-btn').addEventListener('click', function() {
+            if(confirm('로그아웃 하시겠습니까?')) {
+                alert('로그아웃 되었습니다.');
+            }
+        });
+    </script>
+</body>
+</html>

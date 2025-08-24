@@ -1,0 +1,7 @@
+cmd ref
+cd <Streamlit 폴더 주소>
+streamlit
+streamlit run "C:\Users\user\Desktop\Streamlit\1. Basic\magic_cmd.py"
+
+D:\
+git remote set-url origin https://gemjh@github.com/gemjh/SeSAC.git/

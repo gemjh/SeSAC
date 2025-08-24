@@ -1,0 +1,4 @@
+스트림릿 실행하기: cmd에서
+cd <Streamlit 폴더 주소>
+streamlit
+streamlit run "C:\Users\user\Desktop\Streamlit\1. Basic\magic_cmd.py"
