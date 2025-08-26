@@ -23,6 +23,7 @@ import streamlit as st
 import mysql.connector
 from datetime import datetime
 import zipfile
+import random
 import shutil
 import wave
 import pandas as pd
@@ -68,8 +69,8 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
         new_folder_name = ''
         new_folder_path = ''
 
-        extract_path = "files/temp"
-        upload_folder = "files/upload"
+        extract_path = os.path.join("files","temp")
+        upload_folder = os.path.join("files","upload")
         upload_path = os.path.join(base_path, upload_folder)
         # logging.debug("[upload_path] %s", upload_path)
 
@@ -121,13 +122,12 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
             target_path = os.path.join(upload_path, new_folder_name)
             logging.debug("[target_path] %s", target_path)
 
-
-
             # 폴더 밑에 있는 파일 정보를 DB에 저장
             path_blitem = target_path
             #print(path_blitem)
             if os.path.isdir(path_blitem):
                 sub_lst = os.listdir(path_blitem)
+                csv_found = False  # CSV 파일 발견 여부 확인
 
                 for slitem in sub_lst:
                     path_slitem = os.path.join(target_path, slitem)
@@ -135,7 +135,8 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
                     logging.debug("[path_slitem] %s", path_slitem)
                     if os.path.isfile(path_slitem):
                         file_nm = ".".join([patient_id, "csv"])
-                        if (slitem == file_nm):
+                        if slitem == file_nm:
+                            csv_found = True
                             df = pd.read_csv(path_slitem)
 
                             pattern = r'^-?\d+(\.\d+)?$' # 숫자 패턴 체크용
@@ -201,8 +202,32 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
                                 logging.error("[Exception] assess_lst 테이블에 %s 환자 정보 입력 중 오류 발생: %s", patient_id, e)
                                 conn.rollback()  # 오류 발생 시 롤백
 
-                    # 폴더 밑에 있는 wave 파일 정보를 저장
-                    elif os.path.isdir(path_slitem):
+                # #################################################### #
+                # 2025.08.25 - Claude Code Enhancement
+                # CSV 파일이 없어도 업로드 가능하도록 기본값 처리 로직 추가
+                # ZIP 파일만으로도 업로드 완료할 수 있게 개선
+                # 랜덤 검사자 이름 배정으로 재미 요소 추가 🎲
+                # #################################################### #
+                if not csv_found:
+                    try:
+                        # 랜덤 검사자 선택 (장난용 😄)
+                        random_assessors = ['김재헌', '김준영', '이재현', '이효재', '이랑']
+                        selected_assessor = random.choice(random_assessors)
+                        
+                        sql = 'INSERT INTO assess_lst (PATIENT_ID, ORDER_NUM, REQUEST_ORG, ASSESS_DATE, ASSESS_PERSON, AGE, EDU, EXCLUDED, POST_STROKE_DATE, DIAGNOSIS, DIAGNOSIS_ETC, STROKE_TYPE, LESION_LOCATION, HEMIPLEGIA, HEMINEGLECT, VISUAL_FIELD_DEFECT) VALUES '
+                        sql += f"('{patient_id}', {order_num}, NULL, NULL, '{selected_assessor}', NULL, NULL, '0', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)"
+                        cursor.execute(sql)
+                        logging.info('assess_lst 테이블에 %s 환자 정보 입력 (기본값 - CSV 없음, 검사자: %s)', patient_id, selected_assessor)
+                        conn.commit()
+                    except Exception as e:
+                        logging.error("[Exception] assess_lst 테이블에 %s 환자 정보 입력(기본값) 중 오류 발생: %s", patient_id, e)
+                        conn.rollback()
+                        return False  # assess_lst 삽입 실패 시 전체 프로세스 중단
+
+                # 폴더 밑에 있는 wave 파일 정보를 저장
+                for slitem in sub_lst:
+                    path_slitem = os.path.join(target_path, slitem)
+                    if os.path.isdir(path_slitem):
                         if slitem == 'CLAP_A':
                             # CLAP_A에 대한 처리
                             sql = "INSERT INTO ASSESS_FILE_LST (PATIENT_ID,ORDER_NUM,ASSESS_TYPE,QUESTION_CD,QUESTION_NO,QUESTION_MINOR_NO,MAIN_PATH,SUB_PATH,FILE_NAME,DURATION,RATE) VALUES \n"
@@ -378,4 +403,4 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
                 conn.close()
 
         logging.info("-"*30)
-    return df
+    return str(order_num), df

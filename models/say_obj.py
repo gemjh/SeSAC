@@ -13,18 +13,28 @@ TOKEN_SEQ_LEN = 512      # Whisper 토큰 길이
 TEMPERATURE = 0
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "say_obj_model.keras")
 
-# 저장된 Keras 모델 불러오기
-model = load_model(MODEL_PATH)
+# ============================================================================
+# 전역 변수 제거 및 동적 로딩으로 변경 - 2025.08.22 수정
+# 메모리 누수 방지를 위해 모델들을 전역에서 로드하지 않고 필요할 때 로드
+# ============================================================================
 
-# 저장된 가중치 불러오기
+# 저장된 가중치 불러오기 (가중치는 작은 파일이므로 전역 로드 유지)
 W_PATH = os.path.join(os.path.dirname(__file__), "say_obj_weights.npy")
-
 w = np.load(W_PATH)     # [w_r, w_s, w_rs, b]
 
-# ========== Whisper 모델 초기화 ==========
-device = "cuda" if torch.cuda.is_available() else "cpu"  
-processor = WhisperProcessor.from_pretrained("openai/whisper-base") 
-whisper_model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-base").to(device)
+# Whisper 모델 관련 변수들 (필요할 때 로드)
+device = None
+processor = None
+whisper_model = None
+
+def _load_whisper_models():
+    """Whisper 모델들을 동적으로 로드하는 함수 - 2025.08.22 추가"""
+    global device, processor, whisper_model
+    if processor is None or whisper_model is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"  
+        processor = WhisperProcessor.from_pretrained("openai/whisper-base") 
+        whisper_model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-base").to(device)
+    return device, processor, whisper_model
 
 # ========== 오디오 파일을 Mel-Spectrogram으로 변환 ==========
 def wav_to_mel(wav_path, sr=SAMPLE_RATE, n_mels=N_MELS):
@@ -36,6 +46,11 @@ def wav_to_mel(wav_path, sr=SAMPLE_RATE, n_mels=N_MELS):
 
 # ========== 오디오 파일을 Whisper Token ID로 변환 ==========
 def wav_to_token_ids(wav_path, sr=SAMPLE_RATE, seq_len=TOKEN_SEQ_LEN):
+    # ============================================================================
+    # Whisper 모델 동적 로딩 사용 - 2025.08.22 수정
+    # ============================================================================
+    device, processor, whisper_model = _load_whisper_models()
+    
     y, _ = librosa.load(wav_path, sr=sr)                                          # 오디오 로드
     inputs = processor(y, sampling_rate=sr, return_tensors="pt")                  # Whisper Processor로 전처리
     input_features = inputs.input_features.to(device)                             # Whisper 입력 포맷 (Device 할당)
@@ -52,15 +67,36 @@ def wav_to_token_ids(wav_path, sr=SAMPLE_RATE, seq_len=TOKEN_SEQ_LEN):
 
 # ========== 변환된 Mel-Spectrogram, Whisper Token ID로 점수 예측(0~1) ==========
 def predict_score(wav_path):
-    mel = wav_to_mel(wav_path)                          # (128, time, 1)
-    token_ids = wav_to_token_ids(wav_path)              # (TOKEN_SEQ_LEN,)
+    # ============================================================================
+    # 모델 동적 로딩으로 변경 - 2025.08.22 수정
+    # 전역 모델 대신 함수 내에서 로드하여 메모리 관리 개선
+    # ============================================================================
+    
+    # 매번 모델을 새로 로드 (메모리 관리를 위함) - name_scope 스택 오류 방지를 위한 세션 초기화 추가 - 2025.08.26
+    tf.keras.backend.clear_session()
+    model = load_model(MODEL_PATH)
+    
+    try:
+        mel = wav_to_mel(wav_path)                          # (128, time, 1)
+        token_ids = wav_to_token_ids(wav_path)              # (TOKEN_SEQ_LEN,)
 
-    mel_in = mel[np.newaxis, ...]                       # (1, 128, time, 1)
-    token_in = token_ids[np.newaxis, :]                 # (1, TOKEN_SEQ_LEN)
+        mel_in = mel[np.newaxis, ...]                       # (1, 128, time, 1)
+        token_in = token_ids[np.newaxis, :]                 # (1, TOKEN_SEQ_LEN)
 
-    pred = model.predict({'mel_input': mel_in, 'token_input': token_in}, verbose=0)
-
-    return float(pred[0, 0])
+        pred = model.predict({'mel_input': mel_in, 'token_input': token_in}, verbose=0)
+        
+        return float(pred[0, 0])
+    finally:
+        # ============================================================================
+        # 메모리 정리 - 2025.08.22 추가
+        # 예측 완료 후 모델과 TensorFlow 세션을 정리하여 메모리 확보
+        # ============================================================================
+        try:
+            if 'model' in locals():
+                del model
+        except:
+            pass
+        tf.keras.backend.clear_session()
 
 # ========== total 점수 예측 ==========
 def predict_total_say_obj(rainbow_wav_path, swing_wav_path):

@@ -22,8 +22,10 @@ def wav_padding(wav, wav_max_len=312):
   if pad_width > 0:
     # 오른쪽(열 끝)에 0을 채움: ((행 시작, 행 끝), (열 시작, 열 끝))
     padded = np.pad(wav, pad_width=((0, 0), (0, pad_width)), mode='constant', constant_values=-80)
-  else:
-    padded = wav  # 이미 가장 김
+  elif pad_width == 0:
+    padded = wav
+  elif pad_width < 0:
+    padded = wav[:,:wav_max_len]
   return padded
 
 def hardtanh(x, min_val=-20.0, max_val=20.0):
@@ -97,6 +99,8 @@ def main(wav_path):
     else:
       return f"파일 Path가 올바르지 않습니다. (path: {path})"
   
+    # 모델 로드 - name_scope 스택 오류 방지를 위한 세션 초기화 추가 - 2025.08.26
+    tf.keras.backend.clear_session()
     pred_model = tf.keras.models.load_model(os.path.join(os.path.dirname(__file__),'KoSp_tf_CLAP_D.keras'),
       custom_objects={
         "hardtanh": hardtanh,
@@ -105,10 +109,25 @@ def main(wav_path):
         'CTC': tf.keras.losses.CTC()
         }
     )
-    # path = 'C:/Users/eunhy/1001_p_4_0.wav'
-    x_pred_data = pred_preprocess(path,n_mels=80)
-    pred_y = pred_model.predict([x_pred_data,np.expand_dims(sub_x_data,axis=0)])
-    total_score += np.argmax(pred_y)
+    
+    try:
+      # path = 'C:/Users/eunhy/1001_p_4_0.wav'
+      x_pred_data = pred_preprocess(path,n_mels=80)
+      pred_y = pred_model.predict([x_pred_data,np.expand_dims(sub_x_data,axis=0)])
+      total_score += np.argmax(pred_y)
+    finally:
+      # ============================================================================
+      # 메모리 관리 개선 - 2025.08.22 추가
+      # 메모리 누수 방지를 위한 모델 정리
+      # 예측 완료 후 모델을 메모리에서 완전히 제거하여 다음 모델 로드가 제대로 작동하도록 함
+      # TensorFlow 세션도 함께 초기화하여 GPU/CPU 메모리 확보
+      # ============================================================================
+      try:
+          if 'pred_model' in locals():
+              del pred_model
+      except:
+          pass
+      tf.keras.backend.clear_session()
 
   print(f"녹음파일의 예상 점수는 {total_score}점 입니다.")
   return total_score

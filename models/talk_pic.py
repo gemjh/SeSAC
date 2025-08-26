@@ -13,6 +13,7 @@ import torch
 import os
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from tensorflow.keras.models import load_model
+import tensorflow as tf  # tf import 추가 - 2025.08.22
 
 # ====== 설정 ======
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "multilabel_whisper_attn_medium.keras")
@@ -29,14 +30,31 @@ target_words = [
 ]
 NUM_LABELS = len(target_words)
 
-# ====== 모델 로드 ======
-model = load_model(MODEL_PATH)
+# ============================================================================
+# 전역 모델 로딩 제거 및 동적 로딩으로 변경 - 2025.08.22 수정
+# 메모리 누수 방지를 위해 필요할 때만 모델 로드
+# ============================================================================
 
-# ====== Whisper 로드 (학습 때와 동일) ======
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-processor = WhisperProcessor.from_pretrained("openai/whisper-medium")
-whisper_model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-medium").to(device)
-whisper_model.eval()
+# 전역 변수들을 None으로 초기화
+device = None
+processor = None
+whisper_model = None
+
+def _load_models():
+    """모델들을 동적으로 로드하는 함수 - 2025.08.22 추가"""
+    global device, processor, whisper_model
+    
+    # Whisper 모델 로드
+    if device is None or processor is None or whisper_model is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        processor = WhisperProcessor.from_pretrained("openai/whisper-medium")
+        whisper_model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-medium").to(device)
+        whisper_model.eval()
+    
+    # Keras 모델 로드 (매번 새로 로드하여 메모리 관리)
+    model = load_model(MODEL_PATH)
+    
+    return device, processor, whisper_model, model
 
 # ====== 전처리 함수 ======
 def load_wav_to_mel(wav_path, sr=SAMPLE_RATE, n_mels=N_MELS):
@@ -49,6 +67,11 @@ def load_wav_to_mel(wav_path, sr=SAMPLE_RATE, n_mels=N_MELS):
 
 @torch.no_grad()
 def extract_token_ids_from_wav(wav_path):
+    # ============================================================================
+    # 동적 모델 로딩 사용 - 2025.08.22 수정
+    # ============================================================================
+    device, processor, whisper_model, _ = _load_models()
+    
     speech_array, _ = librosa.load(wav_path, sr=SAMPLE_RATE, mono=True)
     inputs = processor(speech_array, sampling_rate=SAMPLE_RATE, return_tensors="pt")
     input_features = inputs.input_features.to(device)
@@ -76,13 +99,30 @@ def prepare_inputs_for_inference(wav_path):
     return mel, token_ids
 
 # ====== 예측 및 점수 계산 (임계값 이상 개수만 점수로) ======
-def score_audio(wav_path, mdl=model, threshold=THRESHOLD, label_names=target_words):
-    X_mel, X_tok = prepare_inputs_for_inference(wav_path)
-    pred = mdl.predict([X_mel, X_tok], verbose=0)[0]   # (NUM_LABELS,)
-    count = int(np.sum(pred >= threshold))
-    print(f"\n파일: {wav_path}")
-    print(f"총점: {count} / {len(label_names)}")
-    return count
+def score_audio(wav_path, threshold=THRESHOLD, label_names=target_words):
+    # ============================================================================
+    # 모델 동적 로딩 및 메모리 정리 추가 - 2025.08.22 수정
+    # ============================================================================
+    _, _, _, model = _load_models()
+    
+    try:
+        X_mel, X_tok = prepare_inputs_for_inference(wav_path)
+        pred = model.predict([X_mel, X_tok], verbose=0)[0]   # (NUM_LABELS,)
+        count = int(np.sum(pred >= threshold))
+        # print(f"\n파일: {wav_path}")
+        # print(f"총점: {count} / {len(label_names)}")
+        return count
+    finally:
+        # ============================================================================
+        # 메모리 정리 - 2025.08.22 추가  
+        # 예측 완료 후 Keras 모델과 TensorFlow 세션을 정리하여 메모리 확보
+        # ============================================================================
+        try:
+            if 'model' in locals():
+                del model
+        except:
+            pass
+        tf.keras.backend.clear_session()
 
 # 사용 예시
 # wav_file = r"C:\Users\ous37\Downloads\임상data(폴더명 수정)\3019\CLAP_A\7\p_1_0.wav"

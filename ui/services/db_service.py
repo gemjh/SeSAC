@@ -14,11 +14,6 @@ def get_reports(patient_id, test_type=None):
             df.columns=[
                 'ORDER_NUM', 'PATIENT_ID', 'PATIENT_NAME', 'AGE', 'SEX', 'ASSESS_TYPE', 'MAIN_PATH', 'ASSESS_DATE', 'REQUEST_ORG', 'ASSESS_PERSON'
             ]
-        else:
-            df=pd.DataFrame(['1001',1,'충북대','2025-11-14','김재헌','CLAP_D','1001','박충북',0,65]).T
-            df.columns=[
-                'ORDER_NUM', 'PATIENT_ID', 'PATIENT_NAME', 'AGE', 'SEX', 'ASSESS_TYPE', 'MAIN_PATH', 'ASSESS_DATE', 'REQUEST_ORG', 'ASSESS_PERSON'
-            ]
     except Exception as e:
         print(f"환자 정보 호출 중 오류 발생: {e}")
         

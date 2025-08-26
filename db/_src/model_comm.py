@@ -89,7 +89,7 @@ def get_file_lst(assess_type, question_cd, question_no=None, order_num=None):
 # save_score : 환자의 평가 점수를 저장한다. (insert or update)
 # 입력 받는 dataframe의 컬럼은 다음과 같아야 한다. 
 # ['PATIENT_ID', 'ORDER_NUM', 'ASSESS_TYPE', 'QUESTION_CD', 'QUESTION_NO', 'QUESTION_MINOR_NO', 'SCORE']
-# ########################################
+# ####################################### #
 def save_score(score_df):
     if (score_df is None) or (len(score_df) == 0):
         return f"오류 발생: 입력된 데이터가 없습니다."
@@ -178,14 +178,3 @@ def delete_score(patient_id, order_num):
             cursor.close()
         if conn:
             conn.close()
-
-# import sys
-# sys.path.append('/Volumes/SSAM/project/db/src')
-
-# import model_comm as mc
-
-# # 평가 점수 조회
-# import report_main as rep
-# msg, df = rep.get_assess_score('1001', 1)
-# df['SUBSET_TOTAL'] = df.groupby('SUBSET')['SCORE'].transform('sum')
-# df

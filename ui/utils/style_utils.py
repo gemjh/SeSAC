@@ -290,6 +290,47 @@ div[data-testid="column"]:nth-child(2) {
     font-weight: bold;
     text-align: left;
     padding-left: 15px;
+
+/* 결과 요약 테이블    */
+.main-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 20px 0;
+}
+.main-table th, .main-table td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: center;
+    vertical-align: middle;
+    color: black !important;
+}
+.main-table th {
+    background-color: #d8ebff;
+    font-weight: bold;
+    color: #333;
+}
+.header-row {
+    background-color: #d4edda;
+    font-weight: bold;
+}
+.total-row {
+    background-color: #d8ebff;
+    font-weight: bold;
+}
+.category-section {
+    background-color: #f8f9fa;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+}
+.category-header {
+    background-color: #d8ebff;
+    padding: 8px;
+    margin-bottom: 10px;
+    border-radius: 3px;
+    font-weight: bold;
+    text-align: center;
 }
 </style>
 """
@@ -297,229 +338,3 @@ div[data-testid="column"]:nth-child(2) {
 def apply_custom_css():
     """CSS 스타일을 적용하는 함수"""
     st.markdown(CSS_STYLES, unsafe_allow_html=True)
-
-
-def create_evaluation_table_html(eval_item):
-    """st.components.v1.html을 위한 완전한 HTML 문서 생성"""
-    
-    html_content = f"""
-        <style>
-        body {{
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 10px;
-        }}
-
-        .pronunciation-detail-table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-            font-size: 14px;
-        }}
-        .pronunciation-detail-table th {{
-            background-color: #f2f2f2 !important;
-            font-weight: bold;
-        }}
-        .pronunciation-detail-table th, .pronunciation-detail-table td {{
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-            vertical-align: middle;
-        }}
-        .pronunciation-detail-table .content-column {{
-            background-color: white;
-            text-align: left;
-            padding-left: 15px;
-            width: 200px;
-        }}
-        .pronunciation-detail-table .button-column {{
-            width: auto;
-            background-color: white;
-        }}
-        .pronunciation-detail-table .time-column {{
-            width: 80px;
-            background-color: white;
-        }}
-        .pronunciation-detail-table .score-column {{
-            width: 60px;
-            background-color: white;
-        }}
-        .rec-button {{
-            background-color: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 15px;
-            padding: 4px 12px;
-            font-size: 11px;
-            margin-right: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }}
-        .rec-button:hover {{
-            background-color: #c0392b;
-        }}
-        .graph-button {{
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 15px;
-            padding: 4px 12px;
-            font-size: 11px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }}
-        .graph-button:hover {{
-            background-color: #2980b9;
-        }}
-        .section-title{{
-            font-size: 16px;
-            font-weight: bold;
-            margin: 5px 0 10px 0;
-            color: #333;
-        }}
-        .summary-text {{
-            text-align: right;
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 10px;
-        }}
-        </style>
-    </head>
-    <body>
-        <div class="section-title">{eval_item['title']}</div>
-        <div class="summary-text">{eval_item['summary']}</div>
-        
-        <table class="pronunciation-detail-table">
-            <thead>
-                <tr>
-                    <th class="no-column">NO.</th>
-                    <th colspan="2" class="content-column">문항</th>
-                    <th class="time-column">발성시간</th>
-                    <th class="score-column">점수</th>
-                </tr>
-            </thead>
-            <tbody>
-    """
-    
-    # 각 항목을 위한 행들 추가
-    for i, item in enumerate(eval_item['items']):
-        html_content += f"""
-                <tr>
-                    <td class="no-column">{item['no']}</td>
-                    <td class="content-column">{item['content']}</td>
-                    <td class="button-column">
-                        <button class="rec-button" onclick="recordSound('{eval_item['id']}', {i})">REC.</button>
-                        <button class="graph-button" onclick="showGraph('{eval_item['id']}', {i})">GRAPH</button>
-                    </td>
-                    <td class="time-column">NNN초</td>
-                    <td class="score-column"></td>
-                </tr>
-        """
-    
-    html_content += """
-            </tbody>
-        </table>
-        
-        <script>
-        function recordSound(evalId, itemIndex) {
-            alert('🎤 ' + evalId + ' - ' + itemIndex + '번째 항목 녹음을 시작합니다!');
-        }
-        
-        function showGraph(evalId, itemIndex) {
-            alert('📊 ' + evalId + ' - ' + itemIndex + '번째 항목의 그래프를 표시합니다!');
-        }
-        </script>
-    </body>
-    </html>
-    """
-    
-    return html_content
-
-def create_word_level_table(word_level_data=None):
-    """단어수준 또박또박 말하기 테이블 생성"""
-    html = """
-    <div class="section-title">또박또박 말하기</div>
-    <div class="summary-text">단어 수준&nbsp;&nbsp;&nbsp;&nbsp;자음정확도 NN/NN NN% 모음 정확도 NN/NN NN% 총점 NN 점</div>
-    
-    <table class="assessment-table">
-        <thead>
-            <tr>
-                <th>NO.</th>
-                <th>문항</th>
-                <th>초성</th>
-                <th>중성</th>
-                <th>7종성</th>
-                <th>모음</th>
-                <th>전사</th>
-                <th>점수</th>
-            </tr>
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
-    """
-    return html
-
-def create_sentence_level_table(sentence_level_data):
-    """문장수준 또박또박 말하기 테이블 생성"""
-    
-    html = """
-    <div class="section-title">또박또박 읽기</div>
-    <div class="summary-text">문장 수준&nbsp;&nbsp;&nbsp;&nbsp;자음정확도 NN/NN NN% 총점 NN 점</div>
-    
-    <table class="assessment-table">
-        <thead>
-            <tr>
-                <th>NO.</th>
-                <th>문항</th>
-                <th colspan="2">반응 기록</th>
-                <th>점수</th>
-            </tr>
-            <tr>
-                <th></th>
-                <th></th>
-                <th>자음 정확도</th>
-                <th>개수</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-    """
-    
-    for data_item in sentence_level_data:
-        no = data_item['no']
-        sentences = data_item['sentence']
-        phonemes = data_item['phonemes']
-        score = data_item['score']
-        
-        phonemes_count = len(phonemes)
-        sentence_text = "<br>".join(sentences)
-        
-        for i, phoneme in enumerate(phonemes):
-            sound = phoneme['sound']
-            count = phoneme['count']
-            
-            if i == 0:  # 첫 번째 행
-                html += f"""
-            <tr>
-                <td rowspan="{phonemes_count}">{no}</td>
-                <td class="category-cell" rowspan="{phonemes_count}">{sentence_text}</td>
-                <td>{sound}</td>
-                <td>{count}</td>
-                <td rowspan="{phonemes_count}">{score}</td>
-            </tr>
-                """
-            else:  # 나머지 행들
-                html += f"""
-            <tr>
-                <td>{sound}</td>
-                <td>{count}</td>
-            </tr>
-                """
-    
-    html += """
-        </tbody>
-    </table>
-    """
-    
-    return html

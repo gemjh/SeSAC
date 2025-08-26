@@ -151,25 +151,46 @@ def _pick_one_above_threshold(probs, pid, thresholds_by_prompt):
 class GuessEndInferencer:
 
     def __init__(self, model_path: str, thresholds_by_prompt=None):
-        # compile=False로 로드 (커스텀 로스 필요 없음)
-        self.model = tf.keras.models.load_model(model_path, compile=False)
+        # ============================================================================
+        # 모델 경로만 저장하고 필요할 때 로드하도록 변경 - 2025.08.22 수정
+        # 메모리 효율성을 위해 모델을 미리 로드하지 않음
+        # ============================================================================
+        self.model_path = model_path
         self.thresholds = thresholds_by_prompt or THR_BY_PROMPT_DEFAULT
-        print('-----------------\n\n\n 시작 -----------------\n\n\n')
     def predict(self, wav_path: str, prompt_id: int):
         """
         반환: (best_word | None, score:int(0/1/2), conf:float, probs:np.ndarray(M,))
         """
-        print('-----------------predict:\n\n\n', wav_path,prompt_id, '-----------------\n\n\n')
-        mel = _load_wav_to_mel(wav_path)
-        tok_ids, tok_msk = _extract_token_ids_and_mask_from_wav(wav_path)
-        # 배치화
-        mel_b = _pad_mel_batch([mel])         # (1,128,T,1)
-        tok_b = np.expand_dims(tok_ids, 0)    # (1,L)
-        msk_b = np.expand_dims(tok_msk, 0)    # (1,L)
-        pid_b = np.array([prompt_id], dtype=np.int32)  # (1,)
+        
+        # ============================================================================
+        # 모델을 동적으로 로드하고 사용 후 정리 - 2025.08.22 수정
+        # name_scope 스택 오류 방지를 위한 세션 초기화 추가 - 2025.08.26
+        # ============================================================================
+        tf.keras.backend.clear_session()
+        model = tf.keras.models.load_model(self.model_path, compile=False)
+        
+        try:
+            mel = _load_wav_to_mel(wav_path)
+            tok_ids, tok_msk = _extract_token_ids_and_mask_from_wav(wav_path)
+            # 배치화
+            mel_b = _pad_mel_batch([mel])         # (1,128,T,1)
+            tok_b = np.expand_dims(tok_ids, 0)    # (1,L)
+            msk_b = np.expand_dims(tok_msk, 0)    # (1,L)
+            pid_b = np.array([prompt_id], dtype=np.int32)  # (1,)
 
-        probs = self.model.predict([mel_b, tok_b, msk_b, pid_b], verbose=0)[0].astype('float')  # (M,)
-        best_word, score, conf = _pick_one_above_threshold(probs, prompt_id, self.thresholds)
+            probs = model.predict([mel_b, tok_b, msk_b, pid_b], verbose=0)[0].astype('float')  # (M,)
+            best_word, score, conf = _pick_one_above_threshold(probs, prompt_id, self.thresholds)
+        finally:
+            # ============================================================================
+            # 메모리 정리 - 2025.08.22 추가
+            # 예측 완료 후 모델을 메모리에서 제거하여 메모리 누수 방지
+            # ============================================================================
+            try:
+                if 'model' in locals():
+                    del model
+            except:
+                pass
+            tf.keras.backend.clear_session()
         return best_word, score, conf, probs
 
     def predict_guess_end(self, wav_path: str, prompt_id: int) -> int:

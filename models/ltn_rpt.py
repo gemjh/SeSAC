@@ -87,10 +87,26 @@ def predict_score(wav_path):
     model_path = os.path.join(os.path.dirname(__file__), 'model_ltn_rpt.keras')
     print(f"모델 경로: {model_path}")
     print(f"파일 존재 여부: {os.path.exists(model_path)}")
+    
+    # ============================================================================
+    # 모델을 로드하고 사용 후 정리 - 2025.08.22 수정
+    # ============================================================================
     model = load_model(model_path)
-
-    # ========== 예측 ==========
-    preds = model.predict({'mel_input': mel_batch, 'token_input': token_batch})
+    
+    try:
+        # ========== 예측 ==========
+        preds = model.predict({'mel_input': mel_batch, 'token_input': token_batch})
+    finally:
+        # ============================================================================
+        # 메모리 정리 - 2025.08.22 추가
+        # 예측 완료 후 모델과 TensorFlow 세션을 정리하여 메모리 확보
+        # ============================================================================
+        try:
+            if 'model' in locals():
+                del model
+        except:
+            pass
+        tf.keras.backend.clear_session()
 
     point = [2.0, 2.0, 2.0, 4.0, 6.0, 8.0, 8.0, 10.0, 14.0, 12.0]
     score = 0.0

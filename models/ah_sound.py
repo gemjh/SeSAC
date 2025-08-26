@@ -68,31 +68,41 @@ def estimate_pitch_spice_only(audio, sr=16000):
         
         print("SPICE 모델 로드 완료")
         
-        if np.max(np.abs(audio)) == 0:
-            raise ValueError("오디오에 신호가 없습니다")
-        
-        audio_tensor = tf.convert_to_tensor(audio, dtype=tf.float32)
-        
-        with tf.device('/CPU:0'):
-            signature_keys = list(model.signatures.keys())
+        try:
+            if np.max(np.abs(audio)) == 0:
+                raise ValueError("오디오에 신호가 없습니다")
             
-            # 모델 워밍업
-            dummy_audio = tf.zeros([1000], dtype=tf.float32)
-            try:
-                _ = model.signatures["serving_default"](dummy_audio)
-                print("모델 워밍업 완료")
-            except Exception as warmup_error:
-                pass
+            audio_tensor = tf.convert_to_tensor(audio, dtype=tf.float32)
             
-            # 실제 모델 실행
-            print("SPICE 모델 실행 중...")
-            outputs = model.signatures["serving_default"](audio_tensor)
+            with tf.device('/CPU:0'):
+                signature_keys = list(model.signatures.keys())
+                
+                # 모델 워밍업
+                dummy_audio = tf.zeros([1000], dtype=tf.float32)
+                try:
+                    _ = model.signatures["serving_default"](dummy_audio)
+                    print("모델 워밍업 완료")
+                except Exception as warmup_error:
+                    pass
+                
+                # 실제 모델 실행
+                print("SPICE 모델 실행 중...")
+                outputs = model.signatures["serving_default"](audio_tensor)
+                
+                pitch = outputs["pitch"].numpy().flatten()
+                uncertainty = outputs["uncertainty"].numpy().flatten()
+                confidence = 1.0 - uncertainty
             
-            pitch = outputs["pitch"].numpy().flatten()
-            uncertainty = outputs["uncertainty"].numpy().flatten()
-            confidence = 1.0 - uncertainty
-        
-        return pitch, confidence
+            return pitch, confidence
+            
+        finally:
+            # ============================================================================
+            # 메모리 정리 - 2025.08.22 추가
+            # SPICE 모델 사용 완료 후 메모리에서 제거하여 메모리 누수 방지
+            # ============================================================================
+            del model
+            tf.keras.backend.clear_session()
+            print("SPICE 모델 메모리 정리 완료")
         
     except Exception as e:
         print(f"SPICE 모델 실행 실패: {e}")
