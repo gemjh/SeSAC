@@ -1,0 +1,134 @@
+@startuml puttergeo_model_sequence
+title 퍼터커 음성 신호 처리 시퀀스 다이어그램
+
+participant "Data Loader" as loader
+participant "audio_preprocess" as preprocess
+participant "wav_padding" as padding
+participant "pred_preprocess" as pred_prep
+participant "build_ptk_model" as model_builder
+participant "peo_model" as peo
+participant "teo_model" as teo
+participant "keo_model" as keo
+participant "ptk_concat_model" as concat
+participant "ptk_model" as ptk
+participant "Model Training" as training
+participant "Prediction" as prediction
+
+== 데이터 로딩 및 전처리 단계 ==
+
+loader -> loader: labeled_data_D.csv 로드
+note right: df = pd.read_csv(csv_path, header=1, index_col=0)
+
+loader -> loader: WAV 파일 패턴 매칭
+note right: glob.glob(pattern, recursive=True)\np_1_*.wav, p_2*.wav, p_3*.wav (peo)\np_4*.wav, p_5*.wav, p_6*.wav (teo)\np_7*.wav, p_8*.wav, p_9*.wav (keo)\np_10*.wav, p_11*.wav, p_12*.wav (ptk)
+
+loop ThreadPoolExecutor 병렬 처리
+    loader -> preprocess: wav_files, sr_param=[16000], mel_param=[128]
+    preprocess -> preprocess: librosa.load(wav, sr=16000)
+    preprocess -> preprocess: librosa.feature.melspectrogram(y, sr, n_mels=128)
+    preprocess -> preprocess: librosa.power_to_db(mel_spec, ref=np.max)
+    preprocess --> loader: return (mel_db, duration, length)
+end
+
+loop WAV 패딩 처리
+    loader -> padding: mel_db_data, wav_max_len=312
+    padding -> padding: np.pad() 또는 슬라이싱
+    note right: pad_width = wav_max_len - wav.shape[1]\nnp.pad(wav, pad_width=((0,0),(0,pad_width)), mode='constant', constant_values=-80)
+    padding --> loader: return padded_wav
+end
+
+loader -> loader: 데이터 분할
+note right: train_test_split(test_size=0.1)\ntrain/valid/test 분할
+
+== 모델 구축 단계 ==
+
+user -> model_builder: 모델 아키텍처 구축 요청
+model_builder -> model_builder: Input Layer (312, 128, 1)
+model_builder -> model_builder: BatchNormalization(momentum=0.9)
+model_builder -> model_builder: Conv2D Blocks (32, 64, 128 filters)
+note right: Conv2D(32, (3,3), activation='relu', padding='same')\nAveragePooling2D((2,2))
+model_builder -> model_builder: Dense Layers (128, 256) + Output(1)
+model_builder --> user: return Model
+
+== 모델 훈련 단계 ==
+
+par peo 모델 훈련
+    user -> training: peo 훈련 데이터 (p_1, p_2, p_3)
+    training -> peo: model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    training -> peo: model.fit(epochs=100, batch_size=16, callbacks=[EarlyStopping, ModelCheckpoint])
+    peo --> training: return trained_model
+    training --> user: peo_model.keras 저장
+
+and teo 모델 훈련
+    user -> training: teo 훈련 데이터 (p_4, p_5, p_6)
+    training -> teo: model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    training -> teo: model.fit(epochs=100, batch_size=16, callbacks=[EarlyStopping, ModelCheckpoint])
+    teo --> training: return trained_model
+    training --> user: teo_model.keras 저장
+
+and keo 모델 훈련
+    user -> training: keo 훈련 데이터 (p_7, p_8, p_9)
+    training -> keo: model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    training -> keo: model.fit(epochs=100, batch_size=16, callbacks=[EarlyStopping, ModelCheckpoint])
+    keo --> training: return trained_model
+    training --> user: keo_model.keras 저장
+end
+
+user -> training: 통합 모델 훈련 (peo+teo+keo 데이터)
+training -> concat: model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+training -> concat: model.fit(epochs=100, batch_size=16)
+concat --> training: return trained_model
+training --> user: ptk_concat_model.keras 저장
+
+user -> training: PTK 모델 훈련 (p_10, p_11, p_12)
+note right: Conv2D 커널 크기 (6,3)으로 수정된 모델
+training -> ptk: model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+training -> ptk: model.fit(epochs=100, batch_size=16)
+ptk --> training: return trained_model
+training --> user: ptk_model.keras 저장
+
+== 예측 및 후처리 단계 ==
+
+user -> pred_prep: 새로운 WAV 파일 경로 제공
+pred_prep -> preprocess: wav_path, sr=16000, n_mels=128
+preprocess --> pred_prep: mel_db, duration, length
+pred_prep -> padding: mel_db, wav_max_len=312
+padding --> pred_prep: padded_wav
+pred_prep -> pred_prep: np.transpose((0,2,1)) + np.expand_dims()
+pred_prep --> user: return x_pred_data
+
+par 모델별 예측
+    user -> peo: x_pred_data
+    peo -> prediction: model.predict(x_pred_data)
+    prediction --> peo: prediction_score
+    peo --> user: peo 예측값
+
+and
+    user -> teo: x_pred_data  
+    teo -> prediction: model.predict(x_pred_data)
+    prediction --> teo: prediction_score
+    teo --> user: teo 예측값
+
+and
+    user -> keo: x_pred_data
+    keo -> prediction: model.predict(x_pred_data)
+    prediction --> keo: prediction_score
+    keo --> user: keo 예측값
+
+and
+    user -> concat: x_pred_data
+    concat -> prediction: model.predict(x_pred_data)
+    prediction --> concat: prediction_score
+    concat --> user: 통합 모델 예측값
+
+and
+    user -> ptk: x_pred_data
+    ptk -> prediction: model.predict(x_pred_data)
+    prediction --> ptk: prediction_score
+    ptk --> user: PTK 모델 예측값
+end
+
+user -> user: 예측 결과 분석 및 상관관계 계산
+note right: np.corrcoef(predictions, actual_scores)\ncorr() 계산으로 모델 성능 평가
+
+@enduml

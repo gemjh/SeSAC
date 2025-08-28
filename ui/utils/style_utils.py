@@ -291,7 +291,7 @@ div[data-testid="column"]:nth-child(2) {
     text-align: left;
     padding-left: 15px;
 
-/* 결과 요약 테이블    */
+/* 결과 요약 테이블 */
 .main-table {
     border-collapse: collapse;
     width: 100%;
@@ -331,6 +331,37 @@ div[data-testid="column"]:nth-child(2) {
     border-radius: 3px;
     font-weight: bold;
     text-align: center;
+}
+
+/* 사이드바 접기 버튼 완전히 숨기기 - 더 강력한 선택자 */
+[data-testid="collapsedControl"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+button[kind="header"],
+button[title="Close sidebar"],
+button[aria-label="Close sidebar"],
+.css-1rs6os .css-17ziqus,
+.css-1rs6os .edgvbvh9,
+.css-vk3wp9,
+.css-17ziqus {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+/* 사이드바 접기/펼치기 버튼 모두 제거 */
+div[data-testid="stSidebarNav"] button {
+    display: none !important;
+}
+
+/* 사이드바 고정 */
+section[data-testid="stSidebar"] {
+    min-width: 200px !important;
+    width: 200px !important;
 }
 </style>
 """

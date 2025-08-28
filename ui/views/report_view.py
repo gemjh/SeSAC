@@ -7,6 +7,7 @@ from services.model_service import (
 )
 from models.guess_end import GuessEndInferencer
 from utils.style_utils import apply_custom_css
+from utils.footer_utils import add_footer
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,10 +17,16 @@ import tempfile
 import os
 from pathlib import Path
 import pandas as pd
+import time
+import base64
+apply_custom_css()
 
 
 
 def show_main_interface(patient_id,path_info):
+    # Footer 추가
+    add_footer()
+    
     # 초기화
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "리포트"
@@ -28,7 +35,21 @@ def show_main_interface(patient_id,path_info):
 
     # 사이드바
     with st.sidebar:
-        st.title("👋 CLAP")
+        st.markdown("""
+        <div style="display: flex; align-items: center; gap: 10px; margin: -4rem 0 20px 0;">
+            <img src="data:image/jpeg;base64,{}" width="140" />
+        </div>
+        """.format(
+            __import__('base64').b64encode(open("ui/utils/logo.jpeg", "rb").read()).decode()
+        ), unsafe_allow_html=True)
+        st.markdown("""
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <img src="data:image/png;base64,{}" width="40" />
+            <h1 style="margin: 0; font-size: 2.5rem;">CLAP</h1>
+        </div>
+        """.format(
+            __import__('base64').b64encode(open("ui/views/clap.png", "rb").read()).decode()
+        ), unsafe_allow_html=True)
         # 메뉴: 있어야 할까?
         st.divider()
         menu_items = ["평가", "재활", "리포트"]
@@ -73,18 +94,18 @@ def show_main_interface(patient_id,path_info):
         if st.session_state.view_mode == "list":
             show_report_page(patient_info['PATIENT_ID'].iloc[0] if not patient_info.empty else '')
         elif 'model_completed' not in st.session_state:
-            spinner = st.spinner('평가 중...')
-            spinner.__enter__()
-            show_detail(model_process(path_info),spinner)
-            st.session_state['model_completed']=True
+        # elif True:
+            print('---------------------- model_not_completed -------------------')
+            with st.spinner('평가 중...'):
+                show_detail(model_process(path_info))
         else:         
             model_comm, report_main = get_db_modules()    
-            print('====>', st.session_state.patient_id,st.session_state.order_num,st.session_state.selected_filter)        
+#             print('====>', st.session_state.patient_id,st.session_state.order_num,st.session_state.selected_filter)        
             msg, ret_df =report_main.get_assess_score(st.session_state.patient_id,st.session_state.order_num,st.session_state.selected_filter)
-            print('---------')
-# 에러 핸들링 문제, 환자id 조회 문제
-            print(msg)
-            print('---------')
+#             print('---------')
+# # 에러 핸들링 문제, 환자id 조회 문제
+#             print(msg)
+#             print('---------')
 
             # ret_df = pd.DataFrame(rows, columns=['PATIENT_ID', 'ORDER_NUM', 'ASSESS_TYPE', 'QUESTION_CD', 'QUESTION_NM', 'SUBSET', 'SCORE', 'SCORE_REF'])
         # fin_scores = {
@@ -107,8 +128,8 @@ def show_main_interface(patient_id,path_info):
             # 환자 정보 표시
             st.divider()
     else:
-        st.markdown("### 🐱 개발 중이니 고양이나 보세요!")
-        st.image("https://cataas.com/cat?width=500&height=400", caption="매번 다른 고양이를 만나보세요!")
+        st.markdown("### 해당 기능은 개발 중입니다 ")
+        st.image("https://cataas.com/cat?width=500&height=400")
         
     # else:
     #     st.info("zip파일과 환자 번호를 모두 선택해 주세요")
@@ -118,9 +139,9 @@ def model_process(path_info):
         # 파일 경로와 목록 정보를 조회
         # print('\n\n\ndf',df)
         ret = path_info[['MAIN_PATH','SUB_PATH','FILE_NAME']]
-        print('------------------------------------')
-        print('ret:',ret)
-        print('------------------------------------')
+        # print('------------------------------------')
+        # print('ret:',ret)
+        # print('------------------------------------')
 
         ah_sound_path=[]
         ptk_sound_path=[]
@@ -132,7 +153,10 @@ def model_process(path_info):
         talk_pic_path=[]
 
         ah_sound_result=None
-        ptk_sound_result=[]
+        p_sound_result=None
+        t_sound_result=None
+        k_sound_result=None
+        ptk_sound_result=None
         ltn_rpt_result=None
         guess_end_result=None
         say_ani_result=None
@@ -190,53 +214,121 @@ def model_process(path_info):
         # 필요할 때만 모듈 import - 2025.08.22 수정
         # ============================================================================                    
         if len(ltn_rpt_path)>0:
-            ltn_rpt = get_ltn_rpt()
-            ltn_rpt_result=ltn_rpt.predict_score(ltn_rpt_path)
-            fin_scores['LTN_RPT']=ltn_rpt_result
+            start_time = time.time()
+            try:
+                ltn_rpt = get_ltn_rpt()
+                ltn_rpt_result=ltn_rpt.predict_score(ltn_rpt_path)
+                fin_scores['LTN_RPT']=ltn_rpt_result
+                print(f"LTN_RPT 모델 실행 시간: {time.time() - start_time:.2f}초")
+            except Exception as e:
+                print(f"LTN_RPT 모델 실행 중 오류 발생: {e}")
+                fin_scores['LTN_RPT'] = 0
 
         if len(guess_end_path)>0:
-            guess_end = get_guess_end()
-            temp=[]
-            infer = guess_end.GuessEndInferencer(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "models", "guess_end_model.keras"))
-            for idx,p in enumerate(guess_end_path):
-                temp.append(infer.predict_guess_end(p,idx))
-            guess_end_result=sum(temp)
-            fin_scores['GUESS_END']=guess_end_result
+            start_time = time.time()
+            try:
+                guess_end = get_guess_end()
+                temp=[]
+                infer = guess_end.GuessEndInferencer(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "models", "guess_end_model.keras"))
+                for idx,p in enumerate(guess_end_path):
+                    temp.append(infer.predict_guess_end(p,idx))
+                guess_end_result=sum(temp)
+                fin_scores['GUESS_END']=guess_end_result
+                print(f"GUESS_END 모델 실행 시간: {time.time() - start_time:.2f}초")
+            except Exception as e:
+                print(f"GUESS_END 모델 실행 중 오류 발생: {e}")
+                fin_scores['GUESS_END'] = 0
 
         if len(say_obj_path)>0:
-            say_obj = get_say_obj()
-            say_obj_result=say_obj.predict_total_say_obj(say_obj_path[5],say_obj_path[8])  
-            fin_scores['SAY_OBJ']=say_obj_result
+            start_time = time.time()
+            try:
+                say_obj = get_say_obj()
+                say_obj_result=say_obj.predict_total_say_obj(say_obj_path[5],say_obj_path[8])  
+                fin_scores['SAY_OBJ']=say_obj_result
+                print(f"SAY_OBJ 모델 실행 시간: {time.time() - start_time:.2f}초")
+            except Exception as e:
+                print(f"SAY_OBJ 모델 실행 중 오류 발생: {e}")
+                fin_scores['SAY_OBJ'] = 0
             
         if len(say_ani_path)>0:
-            say_ani = get_say_ani()
-            say_ani_result=say_ani.score_audio(say_ani_path[0])
-            fin_scores['SAY_ANI']=say_ani_result
+            start_time = time.time()
+            try:
+                say_ani = get_say_ani()
+                say_ani_result=say_ani.score_audio(say_ani_path[0])
+                fin_scores['SAY_ANI']=say_ani_result
+                print(f"SAY_ANI 모델 실행 시간: {time.time() - start_time:.2f}초")
+            except Exception as e:
+                print(f"SAY_ANI 모델 실행 중 오류 발생: {e}")
+                fin_scores['SAY_ANI'] = 0
             
         if len(talk_pic_path)>0:
-            talk_pic = get_talk_pic()
-            talk_pic_result=talk_pic.score_audio(talk_pic_path[0])
-            fin_scores['TALK_PIC']=talk_pic_result
+            start_time = time.time()
+            try:
+                talk_pic = get_talk_pic()
+                talk_pic_result=talk_pic.score_audio(talk_pic_path[0])
+                fin_scores['TALK_PIC']=talk_pic_result
+                print(f"TALK_PIC 모델 실행 시간: {time.time() - start_time:.2f}초")
+            except Exception as e:
+                print(f"TALK_PIC 모델 실행 중 오류 발생: {e}")
+                fin_scores['TALK_PIC'] = 0
             
         if len(ah_sound_path)>0:
-            ah_sound = get_ah_sound()
-            ah_sound_result=round(ah_sound.analyze_pitch_stability(ah_sound_path[0]),2)
-            fin_scores['AH_SOUND']=ah_sound_result
+            start_time = time.time()
+            try:
+                ah_sound = get_ah_sound()
+                ah_sound_result=round(ah_sound.analyze_pitch_stability(ah_sound_path[0]),2)
+                fin_scores['AH_SOUND']=ah_sound_result
+                print(f"AH_SOUND 모델 실행 시간: {time.time() - start_time:.2f}초")
+            except Exception as e:
+                print(f"AH_SOUND 모델 실행 중 오류 발생: {e}")
+                fin_scores['AH_SOUND'] = 0
 
         if len(ptk_sound_path)>0:
-            ptk_sound = get_ptk_sound()
-            for i in range(2, len(ptk_sound_path), 3):  # 2, 5, 8, 11
-                ptk_sound_result.append(ptk_sound.count_peaks_from_waveform(ptk_sound_path[i]))
-            fin_scores['P_SOUND']=ptk_sound_result[0]
-            fin_scores['T_SOUND']=ptk_sound_result[1]
-            fin_scores['K_SOUND']=ptk_sound_result[2]
-            fin_scores['PTK_SOUND']=ptk_sound_result[3]
+            start_time = time.time()
+            try:
+                ptk_sound = get_ptk_sound()
+                temp_p,temp_t,temp_k,temp_ptk=[],[],[],[]
+                for i in range(len(ptk_sound_path)):
+                    if i in [0,1,2]:
+                        temp_p.append(ptk_sound.ptk_each(ptk_sound_path[i]))
+                    elif i in [3,4,5]:
+                        temp_t.append(ptk_sound.ptk_each(ptk_sound_path[i]))
+                    elif i in [6,7,8]:
+                        temp_k.append(ptk_sound.ptk_each(ptk_sound_path[i]))
+                    elif i in [9,10,11]:
+                        temp_ptk.append(ptk_sound.ptk_whole(ptk_sound_path[i]))
+                # if 'p' not in st.session_state:
+                #     st.session_state.p=max(temp_p)
+                # if 't' not in st.session_state:
+                #     st.session_state.p=max(temp_t)                
+                # if 'k' not in st.session_state:
+                #     st.session_state.p=max(temp_k)
+                # if 'ptk' not in st.session_state:
+                #     st.session_state.p=max(temp_ptk)
 
-                
+
+                fin_scores['P_SOUND']=max(temp_p)
+                fin_scores['T_SOUND']=max(temp_t)
+                fin_scores['K_SOUND']=max(temp_k)
+                fin_scores['PTK_SOUND']=max(temp_ptk)
+                print(f"PTK_SOUND 모델 실행 시간: {time.time() - start_time:.2f}초")
+            except Exception as e:
+                print(f"PTK_SOUND 모델 실행 중 오류 발생: {e}")
+                fin_scores['P_SOUND'] = 0
+                fin_scores['T_SOUND'] = 0
+                fin_scores['K_SOUND'] = 0
+                fin_scores['PTK_SOUND'] = 0
+
         if len(talk_clean_path)>0:
-            talk_clean = get_talk_clean()
-            talk_clean_result=talk_clean.main(talk_clean_path)
-            fin_scores['TALK_CLEAN']=talk_clean_result
+            start_time = time.time()
+            try:
+                talk_clean = get_talk_clean()
+                talk_clean_result=talk_clean.main(talk_clean_path)
+                fin_scores['TALK_CLEAN']=talk_clean_result
+                print(f"TALK_CLEAN 모델 실행 시간: {time.time() - start_time:.2f}초")
+            except Exception as e:
+                print(f"TALK_CLEAN 모델 실행 중 오류 발생: {e}")
+                fin_scores['TALK_CLEAN'] = 0
 
         # ['PATIENT_ID', 'ORDER_NUM', 'ASSESS_TYPE', 'QUESTION_CD', 'QUESTION_NO', 'QUESTION_MINOR_NO', 'SCORE']
         # fin_scores = {
@@ -316,7 +408,6 @@ def show_report_page(patient_id):
                             st.session_state.view_mode = "clap_a_detail"
                         elif row['ASSESS_TYPE'] == "CLAP_D":
                             st.session_state.view_mode = "clap_d_detail"
-                        st.session_state.model_completed=True
                         # ??? 또 모델링 함
                         st.rerun()
                 
@@ -375,9 +466,6 @@ def show_detail_common(patient_id):
 
 
 def show_detail(fin_scores):
-    # spinner.__exit__(None, None, None)
-    # CSS 스타일 적용
-    apply_custom_css()
     
     # 리포트 데이터 가져오기
     report = st.session_state.selected_report
@@ -404,46 +492,46 @@ def show_detail(fin_scores):
         
         # 차트
         table_html = f"""
-        <table class="main-table">
+        <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
             <thead>
-                <tr class="header-row">
-                    <th>문항 (개수)</th>
-                    <th>결과</th>
-                    <th colspan="2">실어증 점수</th>
+                <tr style="background-color: #d4edda; font-weight: bold;">
+                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; background-color: #d8ebff; font-weight: bold; color: #333;">문항 (개수)</th>
+                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; background-color: #d8ebff; font-weight: bold; color: #333;">결과</th>
+                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; background-color: #d8ebff; font-weight: bold; color: #333;" colspan="2">실어증 점수</th>
                 </tr>
             </thead>
             <tbody>
                 <tr style="background-color: #f0f8ff;">
-                    <td>듣고 따라 말하기 (10)</td>
-                    <td>{fin_scores.get('LTN_RPT', '-')}점</td>
-                    <td>따라 말하기</td>
-                    <td>{fin_scores.get('LTN_RPT', '-')}점</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">듣고 따라 말하기 (10)</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('LTN_RPT', '-')}점</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">따라 말하기</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('LTN_RPT', '-')}점</td>
                 </tr>
                 <tr style="background-color: #f0f8ff;">
-                    <td>끝말 맞추기 (5)</td>
-                    <td>{fin_scores.get('GUESS_END', '-')}점</td>
-                    <td rowspan="3">이름대기 및<br>날말찾기</td>
-                    <td rowspan="3">{fin_scores.get('GUESS_END', 0) + fin_scores.get('SAY_OBJ', 0) + fin_scores.get('SAY_ANI', 0)}점</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">끝말 맞추기 (5)</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('GUESS_END', '-')}점</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;" rowspan="3">이름대기 및<br>날말찾기</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;" rowspan="3">{fin_scores.get('GUESS_END', 0) + fin_scores.get('SAY_OBJ', 0) + fin_scores.get('SAY_ANI', 0)}점</td>
                 </tr>
                 <tr style="background-color: #f0f8ff;">
-                    <td>물건 이름 말하기 (10)</td>
-                    <td>{fin_scores.get('SAY_OBJ', '-')}점</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">물건 이름 말하기 (10)</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('SAY_OBJ', '-')}점</td>
                 </tr>
                 <tr style="background-color: #f0f8ff;">
-                    <td>동물 이름 말하기 (1)</td>
-                    <td>{fin_scores.get('SAY_ANI', '-')}점</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">동물 이름 말하기 (1)</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('SAY_ANI', '-')}점</td>
                 </tr>
                 <tr style="background-color: #f0f8ff;">
-                    <td>그림 보고 이야기 하기</td>
-                    <td>{fin_scores.get('TALK_PIC', '-')}점</td>
-                    <td>스스로 말하기</td>
-                    <td>{fin_scores.get('TALK_PIC', '-')}점</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">그림 보고 이야기 하기</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('TALK_PIC', '-')}점</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">스스로 말하기</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('TALK_PIC', '-')}점</td>
                 </tr>
-                <tr class="total-row">
-                    <td>합계</td>
-                    <td>{fin_scores.get('LTN_RPT', 0) + fin_scores.get('GUESS_END', 0) + fin_scores.get('SAY_OBJ', 0) + fin_scores.get('SAY_ANI', 0) + fin_scores.get('TALK_PIC', 0)}점</td>
-                    <td></td>
-                    <td>{fin_scores.get('LTN_RPT', 0) + fin_scores.get('GUESS_END', 0) + fin_scores.get('SAY_OBJ', 0) + fin_scores.get('SAY_ANI', 0) + fin_scores.get('TALK_PIC', 0)}점</td>
+                <tr style="background-color: #d8ebff; font-weight: bold;">
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; font-weight: bold;">합계</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; font-weight: bold;">{fin_scores.get('LTN_RPT', 0) + fin_scores.get('GUESS_END', 0) + fin_scores.get('SAY_OBJ', 0) + fin_scores.get('SAY_ANI', 0) + fin_scores.get('TALK_PIC', 0)}점</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; font-weight: bold;"></td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; font-weight: bold;">{fin_scores.get('LTN_RPT', 0) + fin_scores.get('GUESS_END', 0) + fin_scores.get('SAY_OBJ', 0) + fin_scores.get('SAY_ANI', 0) + fin_scores.get('TALK_PIC', 0)}점</td>
                 </tr>
             </tbody>
         </table>
@@ -463,40 +551,41 @@ def show_detail(fin_scores):
         if not clap_d_data.empty:
 
             table_html = f"""
-            <table class="main-table">
+            <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
                 <thead>
-                    <tr class="header-row">
-                        <th>문항 (개수)</th>
-                        <th>점수</th>
+                    <tr style="background-color: #d4edda; font-weight: bold;">
+                        <th style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; background-color: #d8ebff; font-weight: bold; color: #333;">문항 (개수)</th>
+                        <th style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; background-color: #d8ebff; font-weight: bold; color: #333;">점수</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr style="background-color: #f0f8ff;">
-                        <td>'아' 소리내기 (10)</td>
-                        <td>{fin_scores.get('AH_SOUND', '-')}점</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">'아' 소리내기 (10)</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('AH_SOUND', '-')}점</td>
                     </tr>
                     <tr style="background-color: #f0f8ff;">
-                        <td>'퍼' 반복하기 (10)</td>
-                        <td>{fin_scores.get('P_SOUND', '-')}점</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">'퍼' 반복하기 (10)</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('P_SOUND', '-')}점</td>
                     </tr>
                     <tr style="background-color: #f0f8ff;">
-                        <td>'터' 반복하기 (10)</td>
-                        <td>{fin_scores.get('T_SOUND', '-')}점</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">'터' 반복하기 (10)</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('T_SOUND', '-')}점</td>
                     </tr>
                     <tr style="background-color: #f0f8ff;">
-                        <td>'커' 반복하기 (10)</td>
-                        <td>{fin_scores.get('K_SOUND', '-')}점</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">'커' 반복하기 (10)</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('K_SOUND', '-')}점</td>
                     </tr>
                     <tr style="background-color: #f0f8ff;">
-                        <td>'퍼터커' 반복하기 (10)</td>
-                        <td>{fin_scores.get('PTK_SOUND', '-')}점</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">'퍼터커' 반복하기 (10)</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('PTK_SOUND', '-')}점</td>
                     </tr>
                     <tr style="background-color: #f0f8ff;">
-                        <td>또박또박 말하기</td>
-                        <td>{fin_scores.get('TALK_CLEAN', '-')}점</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">또박또박 말하기</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('TALK_CLEAN', '-')}점</td>
                     </tr>
                 </tbody>
             </table>
             """
             
             st.markdown(table_html, unsafe_allow_html=True)
+            st.session_state['model_completed']=True

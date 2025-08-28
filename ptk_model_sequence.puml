@@ -1,0 +1,43 @@
+@startuml ptk_sequence
+title 퍼터커 음성 신호 처리 시퀀스 다이어그램
+
+participant "Data Loader" as loader
+participant "audio_preprocess(wav, sr, n_mels)" as audio_file_transformation
+participant "wav_padding(wav, wav_max_len)" as padding
+participant "pred_preprocess(wav_path, sr, n_mels)" as preprocess
+participant "build_ptk_model" as model_builder
+participant "Model Training" as training
+participant "ptk_each" as each
+participant "ptk_whole" as ptk
+
+== 전처리 과정 ==
+
+loader -> audio_file_transformation: wav_file, sr=16000, n_mels=128
+audio_file_transformation --> padding: mel_db, duration, length
+
+padding -> preprocess: mel_db, wav_max_len=312
+preprocess --> padding: padded_wav
+padding --> loader: preprocessed_data
+
+
+== 모델링 과정 ==
+
+loader -> model_builder: ptk_each 모델 생성 요청
+model_builder --> loader: ptk_each_model
+loader -> training: ptk_each input data 전달(퍼: p_1, p_2, p_3, 터: p_4, p_5, p_6, 커: p_7, p_8, p_9)
+
+
+training -> each: compile(optimizer='adam', loss='mse')
+training -> each: fit(epochs=100, batch_size=16)
+each --> training: trained_model
+training --> loader: teo_model.keras
+
+loader -> model_builder: ptk_whole 모델 생성 요청
+model_builder --> loader: ptk_whole_model
+loader -> training: ptk_whole input data 전달(p_10, p_11, p_12)
+training -> ptk: compile(optimizer='adam', loss='mse')
+training -> ptk: fit(epochs=100, batch_size=16)
+ptk --> training: trained_model
+training --> loader: ptk_model.keras
+
+@enduml

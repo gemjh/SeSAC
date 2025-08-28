@@ -8,7 +8,7 @@ def get_db_modules():
 def get_reports(patient_id, test_type=None):
     model_comm, report_main=get_db_modules()
     msg,df=report_main.get_assess_lst(patient_id)
-    print(df)
+    # print(df)
     try:
         if patient_id is not None:
             df.columns=[

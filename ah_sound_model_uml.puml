@@ -1,0 +1,86 @@
+@startuml ah_sound_model
+
+!define FUNCTION class
+
+package "ah_sound.py" {
+    
+    FUNCTION setup_tensorflow {
+        +setup_tensorflow()
+        --
+        TensorFlow 환경 설정
+        스레드 수 제한으로 안정성 향상
+        GPU 메모리 증가 설정
+        Eager execution 비활성화
+    }
+    
+    FUNCTION clear_tfhub_cache {
+        +clear_tfhub_cache()
+        --
+        TensorFlow Hub 캐시 클리어
+        임시 디렉토리에서 tfhub_modules 제거
+    }
+    
+    FUNCTION load_audio {
+        +load_audio(filepath, sample_rate=16000)
+        --
+        오디오 파일 로드 및 정규화
+        librosa 사용하여 오디오 로드
+        최대값으로 나누어 정규화
+        반환: (audio, sr)
+    }
+    
+    FUNCTION estimate_pitch_spice_only {
+        +estimate_pitch_spice_only(audio, sr=16000)
+        --
+        SPICE 모델을 사용한 피치 추정
+        TensorFlow Hub에서 SPICE 모델 로드
+        CPU 디바이스 강제 사용
+        모델 워밍업 수행
+        피치와 불확실성 추정
+        메모리 정리 수행
+        반환: (pitch, confidence)
+    }
+    
+    FUNCTION filter_pitch {
+        +filter_pitch(pitch, confidence, threshold=0.7)
+        --
+        신뢰도가 높은 피치만 필터링
+        임계값 이하 피치를 0으로 설정
+        반환: filtered_pitch_list
+    }
+    
+    FUNCTION moving_std {
+        +moving_std(seq, win=5)
+        --
+        이동 윈도우 표준편차 계산
+        패딩을 통한 경계 처리
+        유효값만 사용한 표준편차 계산
+        반환: std_values_list
+    }
+    
+    FUNCTION analyze_pitch_stability {
+        +analyze_pitch_stability(filepath, std_threshold=1.5, confidence_threshold=0.4, window_size=5)
+        --
+        SPICE 전용 피치 안정성 분석 파이프라인
+        전체 분석 워크플로우 실행
+        오디오 로드 → 피치 추정 → 필터링 → 안정성 평가
+        단조성 플래그 계산
+        단조 구간 지속시간 반환
+    }
+    
+    ' 함수 간 호출 관계
+    analyze_pitch_stability --> setup_tensorflow : calls
+    analyze_pitch_stability --> load_audio : calls
+    analyze_pitch_stability --> estimate_pitch_spice_only : calls
+    analyze_pitch_stability --> filter_pitch : calls
+    analyze_pitch_stability --> moving_std : calls (custom_moving_std)
+    
+    estimate_pitch_spice_only --> setup_tensorflow : uses
+    
+    ' 외부 의존성
+    note right of estimate_pitch_spice_only : TensorFlow Hub\\nSPICE 모델 사용
+    note right of load_audio : LibRosa 라이브러리\\n사용하여 오디오 로드
+    note bottom : 주요 특징:\\n- SPICE 모델 전용 피치 분석\\n- 메모리 누수 방지를 위한 명시적 정리\\n- CPU 강제 사용으로 안정성 확보\\n- 신뢰도 기반 피치 필터링\\n- 이동 윈도우 안정성 평가
+}
+
+@enduml

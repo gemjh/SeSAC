@@ -178,23 +178,3 @@ def analyze_pitch_stability(filepath, std_threshold=1.5, confidence_threshold=0.
         print(f"분석 실패: {e}")
         raise e
 
-# def main():
-#     """메인 실행 함수"""
-#     print("SPICE 피치 분석 스크립트 시작 (Metal 비활성화 버전)")
-    
-#     try:
-#         # SPICE 분석 실행
-#         result = analyze_pitch_stability(filepath)
-
-#         print(f"\n✅ 분석 완료!")
-#         print(f"단일음정 유지 시간: {result:.2f}초")
-        
-#         return result
-        
-#     except Exception as e:
-#         print(f"❌ 분석 실패: {e}")
-#         return False
-
-# if __name__ == "__main__":
-#     main()
-

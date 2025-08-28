@@ -39,7 +39,7 @@ def patched_isin(elements, test_elements, **kwargs):
         test_elements = test_elements.cpu()
     return original_isin(elements, test_elements, **kwargs)
 torch.isin = patched_isin
-
+from tqdm import tqdm # 진행률 알려주는 라이브러리
 from views.login_view import show_login_page
 from views.report_view import show_main_interface, show_report_page, show_detail, show_detail_common
 from services.db_service import get_db_modules
@@ -78,6 +78,7 @@ from services.db_service import (
 from utils.style_utils import (
     apply_custom_css
 )
+from utils.footer_utils import add_footer
 from services.auth_service import authenticate_user
 
 from services.upload_service import zip_upload, get_connection
@@ -88,6 +89,7 @@ apply_custom_css()
 
 
 def main():
+    add_footer()
     # 세션 상태 초기화
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
@@ -136,6 +138,7 @@ def main():
                 cursor.close()
                 conn.close()
                 st.session_state.upload_completed=True
+                # st.session_state.model_completed=True
                 st.session_state.skip=True
                 st.session_state.order_num=order_num
                 st.session_state.path_info=path_info
