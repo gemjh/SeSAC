@@ -47,13 +47,13 @@
 # Usage
 # ============================================================================
 # Convert PlantUML file to PNG:
-# plantuml -tpng clap_system_uml_sequence.puml
+# plantuml -tpng 내 파일 이름.puml
 
 # Convert to SVG:
-# plantuml -tsvg clap_system_uml_sequence.puml
+# plantuml -tsvg 내 파일 이름.puml
 
 # Convert to PDF:
-# plantuml -tpdf clap_system_uml_sequence.puml
+# plantuml -tpdf 내 파일 이름.puml
 
 # ============================================================================
 # Python Dependencies (if using Python PlantUML libraries)

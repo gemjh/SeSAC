@@ -382,12 +382,12 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
                 finally:
                     pass
 
-                # # 저장한 파일 정보를 조회
+                # 저장한 파일 정보를 조회
                 try:
                 #     st.subheader("저장한 파일 정보 조회")
                     sql = "SELECT A.PATIENT_ID,A.ORDER_NUM,A.ASSESS_TYPE,A.QUESTION_CD,A.QUESTION_NO,A.MAIN_PATH,A.SUB_PATH,A.FILE_NAME \n"
                     sql += "FROM ASSESS_FILE_LST A, CODE_MAST C \n"
-                    sql += "WHERE C.CODE_TYPE = 'ASSESS_TYPE' AND A.ASSESS_TYPE = C.MAST_CD AND A.QUESTION_CD=C.SUB_CD AND A.PATIENT_ID = %s AND A.ORDER_NUM = %s \n"
+                    sql += "WHERE C.CODE_TYPE = 'ASSESS_TYPE' AND A.ASSESS_TYPE = C.MAST_CD AND A.QUESTION_CD=C.SUB_CD AND A.PATIENT_ID = %s AND A.ORDER_NUM = %s AND A.USE_YN = 'Y'\n"
                     sql += "ORDER BY A.ASSESS_TYPE, C.ORDER_NUM, A.QUESTION_NO "
                     # print(sql)
                     cursor.execute(sql, (str(patient_id), str(order_num)))

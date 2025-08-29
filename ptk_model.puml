@@ -2,10 +2,10 @@
 title 퍼터커 음성 신호 처리 시퀀스 다이어그램
 
 participant "Data Loader" as loader
-participant "audio_preprocess(wav, sr, n_mels)" as audio_file_transformation
-participant "wav_padding(wav, wav_max_len)" as padding
-participant "pred_preprocess(wav_path, sr, n_mels)" as preprocess
-participant "build_ptk_model" as model_builder
+participant "audio_preprocess()" as audio_file_transformation
+participant "wav_padding()" as padding
+participant "pred_preprocess()" as preprocess
+participant "build_ptk_model()" as model_builder
 participant "Model Training" as training
 participant "ptk_each" as each
 participant "ptk_whole" as ptk

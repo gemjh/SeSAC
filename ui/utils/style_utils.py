@@ -363,6 +363,168 @@ section[data-testid="stSidebar"] {
     min-width: 200px !important;
     width: 200px !important;
 }
+
+/* CLAP 리포트 전용 스타일 */
+.clap-report {
+    background: white;
+    color: black;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.clap-header {
+    background: linear-gradient(135deg, #2E8B57, #20B2AA);
+    color: white;
+    text-align: center;
+    padding: 20px;
+    margin: -20px -20px 30px -20px;
+    border-radius: 0;
+}
+
+.clap-title {
+    font-size: 36px;
+    font-weight: bold;
+    margin: 0;
+    letter-spacing: 2px;
+}
+
+.clap-subtitle {
+    font-size: 16px;
+    margin: 5px 0 0 0;
+    font-weight: normal;
+}
+
+.clap-institute {
+    font-size: 12px;
+    margin: 10px 0 0 0;
+    text-align: right;
+}
+
+.patient-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    margin: 30px 0;
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.patient-info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px dotted #ccc;
+}
+
+.patient-info-label {
+    font-weight: bold;
+    color: #333;
+    font-size: 14px;
+}
+
+.patient-info-value {
+    color: #666;
+    font-size: 14px;
+}
+
+.results-section {
+    margin: 40px 0;
+}
+
+.results-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    margin: 0 0 20px 0;
+    text-align: center;
+    padding: 15px;
+    background: #f0f0f0;
+    border-radius: 5px;
+}
+
+.clap-results-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.clap-results-table th {
+    background: linear-gradient(135deg, #2E8B57, #20B2AA);
+    color: white;
+    font-weight: bold;
+    padding: 15px 12px;
+    text-align: center;
+    border: 1px solid #fff;
+    font-size: 14px;
+}
+
+.clap-results-table td {
+    padding: 12px;
+    text-align: center;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #333;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+.clap-results-table tbody tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.clap-results-table tbody tr:hover {
+    background: #e3f2fd;
+}
+
+.test-item-column {
+    text-align: left !important;
+    font-weight: 500;
+    background: #f5f5f5 !important;
+    padding-left: 20px !important;
+}
+
+.score-column {
+    font-weight: bold;
+    color: #2E8B57;
+    font-size: 16px;
+}
+
+.category-header-row th {
+    background: linear-gradient(135deg, #4CAF50, #45a049) !important;
+    color: white !important;
+    font-size: 15px;
+    text-align: center;
+}
+
+.total-row td {
+    background: linear-gradient(135deg, #FF6B6B, #FF8E8E) !important;
+    color: white !important;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.percentage-display {
+    font-size: 14px;
+    color: #666;
+    font-style: italic;
+}
+
+.back-button {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    margin: 20px 0;
+    cursor: pointer;
+}
+
+.back-button:hover {
+    background: #5a6268;
+}
 </style>
 """
 

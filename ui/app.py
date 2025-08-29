@@ -89,7 +89,6 @@ apply_custom_css()
 
 
 def main():
-    add_footer()
     # 세션 상태 초기화
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
@@ -138,7 +137,7 @@ def main():
                 cursor.close()
                 conn.close()
                 st.session_state.upload_completed=True
-                # st.session_state.model_completed=True
+                st.session_state.model_completed=True
                 st.session_state.skip=True
                 st.session_state.order_num=order_num
                 st.session_state.path_info=path_info

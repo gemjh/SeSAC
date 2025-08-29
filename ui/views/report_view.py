@@ -19,14 +19,14 @@ from pathlib import Path
 import pandas as pd
 import time
 import base64
+import matplotlib.pyplot as plt
+import numpy as np
+
 apply_custom_css()
 
 
 
 def show_main_interface(patient_id,path_info):
-    # Footer 추가
-    add_footer()
-    
     # 초기화
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "리포트"
@@ -35,13 +35,6 @@ def show_main_interface(patient_id,path_info):
 
     # 사이드바
     with st.sidebar:
-        st.markdown("""
-        <div style="display: flex; align-items: center; gap: 10px; margin: -4rem 0 20px 0;">
-            <img src="data:image/jpeg;base64,{}" width="140" />
-        </div>
-        """.format(
-            __import__('base64').b64encode(open("ui/utils/logo.jpeg", "rb").read()).decode()
-        ), unsafe_allow_html=True)
         st.markdown("""
         <div style="display: flex; align-items: center; gap: 10px;">
             <img src="data:image/png;base64,{}" width="40" />
@@ -79,12 +72,25 @@ def show_main_interface(patient_id,path_info):
                 st.write(f"성별: ㅇㅇ")                
         else:
             st.write("환자 정보를 등록하면 여기 표시됩니다")
+
         st.divider()     
-        
+
+
+
         # 로그아웃 버튼
         if st.button("로그아웃", key="logout", use_container_width=True):
             st.session_state.clear()
             st.rerun()
+
+        st.markdown("""
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 20px;">
+            <img src="data:image/jpeg;base64,{}" width="140" />
+        </div>
+        """.format(
+            __import__('base64').b64encode(open("ui/utils/logo.jpeg", "rb").read()).decode()
+        ), unsafe_allow_html=True)
+
+            
         # 파일 경로
         # save_dir = df['MAIN_PATH']
         # print('\n\n\n',save_dir)
@@ -134,6 +140,7 @@ def show_main_interface(patient_id,path_info):
     # else:
     #     st.info("zip파일과 환자 번호를 모두 선택해 주세요")
     
+
 def model_process(path_info):            
         # model_comm, report_main = get_db_modules()
         # 파일 경로와 목록 정보를 조회
@@ -307,10 +314,10 @@ def model_process(path_info):
                 #     st.session_state.p=max(temp_ptk)
 
 
-                fin_scores['P_SOUND']=max(temp_p)
-                fin_scores['T_SOUND']=max(temp_t)
-                fin_scores['K_SOUND']=max(temp_k)
-                fin_scores['PTK_SOUND']=max(temp_ptk)
+                fin_scores['P_SOUND']=round(max(temp_p),2)
+                fin_scores['T_SOUND']=round(max(temp_t),2)
+                fin_scores['K_SOUND']=round(max(temp_k),2)
+                fin_scores['PTK_SOUND']=round(max(temp_ptk),2)
                 print(f"PTK_SOUND 모델 실행 시간: {time.time() - start_time:.2f}초")
             except Exception as e:
                 print(f"PTK_SOUND 모델 실행 중 오류 발생: {e}")
@@ -344,6 +351,16 @@ def model_process(path_info):
         #     'PTK_SOUND':ptk_sound_result[3],
         #     'TALK_CLEAN':talk_clean_result
         # }
+        
+        # DB에 점수 저장
+        try:
+            from services.db_service import save_scores_to_db
+            save_scores_to_db(fin_scores)
+            print("점수가 성공적으로 DB에 저장되었습니다.")
+            st.session_state.model_completed=True
+        except Exception as e:
+            print(f"DB 저장 중 오류 발생: {e}")
+        
         return fin_scores
 
 def show_report_page(patient_id):
@@ -417,175 +434,305 @@ def show_report_page(patient_id):
 
 
 def show_detail_common(patient_id):
+    # 뒤로가기 버튼
     col1, col2 = st.columns([3, 9])
     with col1:
         if st.button("< 뒤로가기"):
             st.session_state.view_mode = "list"
             st.rerun()
     with col2:
-        st.markdown(f"<div style='margin-top: 5px; font-weight: bold; text-align: left; margin-left: 0px;'>Order: {st.session_state.selected_report['order_num']}</div>", unsafe_allow_html=True)
-    st.header(st.session_state.selected_filter.replace('_','-'))
-    st.subheader(f"전산화 언어 기능 선별 검사({'실어증' if st.session_state.selected_filter=='CLAP_A' else '마비말장애' if st.session_state.selected_filter=='CLAP_D' else ''}) 결과지")
+        st.markdown(f"<div style='margin-top: 5px; font-weight: bold; text-align: left; margin-left: 0px; color: white;'>Order: {st.session_state.selected_report['order_num']}</div>", unsafe_allow_html=True)
+    
+    # CLAP 타입 확인
+    clap_type = st.session_state.selected_filter.replace('_','-')
+    subtitle = '실어증' if st.session_state.selected_filter=='CLAP_A' else '마비말장애' if st.session_state.selected_filter=='CLAP_D' else ''
 
     # 리포트 상세 가져오기
     model_comm, report_main = get_db_modules()
     msg, patient_detail = report_main.get_patient_info(patient_id,st.session_state.selected_report['order_num'])
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.write(f"의뢰 기관(과)/의뢰인 {patient_detail['REQUEST_ORG'][0]}")
-        st.write(f"이름 {patient_detail['PATIENT_NAME'][0]} ")
-        st.write(f"교육연수 {patient_detail['EDU'][0]}년")
-        st.write(f"방언 NN")
+    # streamlit.components.v1.html() 사용하여 완전한 HTML 렌더링
+    # 데이터 먼저 추출
+    request_org = patient_detail['REQUEST_ORG'][0]
+    assess_person = patient_detail['ASSESS_PERSON'][0] 
+    assess_date = patient_detail['ASSESS_DATE'][0]
+    patient_name = patient_detail['PATIENT_NAME'][0]
+    sex = '남' if patient_detail['SEX'][0]==0 else '여' 
+    age = patient_detail['AGE'][0]
+    patient_id = patient_detail['PATIENT_ID'][0]
+    edu = patient_detail['EDU'][0]
+    post_stroke_date = patient_detail['POST_STROKE_DATE'][0]
+    stroke_type = patient_detail['STROKE_TYPE'][0]
+    hemiplegia = patient_detail['HEMIPLEGIA'][0] if patient_detail['HEMIPLEGIA'][0]!=None else '없음'
+    hemineglect = patient_detail['HEMINEGLECT'][0] if patient_detail['HEMINEGLECT'][0]!=None else '없음'
+    visual_field_defect = patient_detail['VISUAL_FIELD_DEFECT'][0] if patient_detail['VISUAL_FIELD_DEFECT'][0]!=None else '없음'
+    
+    # 완전한 HTML 문서로 구성 (헤더 포함)
+    complete_html = f"""
+    <div style="background: white; margin: 0; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden;">
+        
+        <!-- 헤더 섹션 -->
+        <div style="
+            background: linear-gradient(135deg, #4a90e2, #357abd);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        ">
 
-    with col2:
-        st.write(f"검사자명 {patient_detail['ASSESS_PERSON'][0]}")
-        st.write(f"성별 {'여자' if patient_detail['SEX'][0]==1 else '남자'}")
-        st.write(f"문해여부 NN")
-        st.write(f"발병일 {patient_detail['POST_STROKE_DATE'][0]}")
+            <div style="text-align: right; font-size: 12px; line-height: 1.4;">
+                Computerized Language Assessment Program for Aphasia
+            </div>            
+            <div style="text-align: left; font-size: 36px; font-weight: bold; letter-spacing: 3px; margin: 10px 0;">
+                {clap_type}
+            </div>
+            <div style="text-align: left; font-size: 16px; margin: 10px 0; font-weight: 500;">
+                전산화 언어 기능 선별 검사 ({subtitle}) 결과지
+            </div>
+            <div style="text-align: right; font-size: 12px; line-height: 1.4;">
+                연구개발<br>충북대학교병원 재활의학과
+            </div>            
+        </div>
+        
+        <!-- 환자 정보 섹션 -->
+        <div style="padding: 20px;">
+        
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold; width: 15%;">의뢰 기관(과) / 의뢰인</td>
+                <td style="border: 1px solid #ddd; padding: 10px; width: 20%;">{request_org}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold; width: 15%;">검사자명</td>
+                <td style="border: 1px solid #ddd; padding: 10px; width: 20%;">{assess_person}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold; width: 15%;">검사일자</td>
+                <td style="border: 1px solid #ddd; padding: 10px; width: 15%;">{assess_date}</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold;">이름</td>
+                <td style="border: 1px solid #ddd; padding: 10px;">{patient_name}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold;">성별</td>
+                <td style="border: 1px solid #ddd; padding: 10px;">{sex}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold;">개인번호</td>
+                <td style="border: 1px solid #ddd; padding: 10px;">{patient_id}</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold;">교육연수</td>
+                <td style="border: 1px solid #ddd; padding: 10px;">{edu}년</td>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold;">문해여부</td>
+                <td style="border: 1px solid #ddd; padding: 10px;">가능</td>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold;">연령</td>
+                <td style="border: 1px solid #ddd; padding: 10px;">{age}</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold;">방언</td>
+                <td style="border: 1px solid #ddd; padding: 10px;">표준어</td>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold;">발병일</td>
+                <td style="border: 1px solid #ddd; padding: 10px;">{post_stroke_date}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold;">실시 횟수</td>
+                <td style="border: 1px solid #ddd; padding: 10px;">N회</td>
+            </tr>
+        </table>
 
-    with col3:
-        st.write(f"검사일자 {patient_detail['ASSESS_DATE'][0]} ")
-        st.write(f"개인번호 {patient_detail['PATIENT_ID'][0]}")
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold; width: 15%;">진단명</td>
+                <td style="border: 1px solid #ddd; padding: 10px;" colspan="5">{stroke_type}</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold;">주요 뇌병변 I</td>
+                <td style="border: 1px solid #ddd; padding: 10px;" colspan="5">뇌경색 / 뇌혈관 / 미확인 / 기타</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold;">주요 뇌병변 II</td>
+                <td style="border: 1px solid #ddd; padding: 10px;" colspan="5">대뇌(전두엽 / 두정엽 / 후두엽) / 소뇌 / 뇌간 / 기저핵 / 시상</td>
+            </tr>
+        </table>
 
-    st.write(f"진단명 {patient_detail['STROKE_TYPE'][0]}")
-    st.write(f"주요 뇌병변 I {patient_detail['DIAGNOSIS'][0]}")
-    st.write(f"주요 뇌병변 II {patient_detail['DIAGNOSIS_ETC'][0]}")
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold; width: 15%;">편마비</td>
+                <td style="border: 1px solid #ddd; padding: 10px; width: 20%;">{hemiplegia}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold; width: 15%;">무시증</td>
+                <td style="border: 1px solid #ddd; padding: 10px; width: 20%;">{hemineglect}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold; width: 15%;">시야결손</td>
+                <td style="border: 1px solid #ddd; padding: 10px; width: 15%;">{visual_field_defect}</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold;">기타 특이사항</td>
+                <td style="border: 1px solid #ddd; padding: 10px;" colspan="5">-</td>
+            </tr>
+        </table>
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.write(f"**편마비** {patient_detail['HEMIPLEGIA'][0]}")
-    with col2:
-        st.write(f"**무시증** {patient_detail['HEMINEGLECT'][0]}")
-    with col3:
-        st.write(f"**시야결손** {patient_detail['VISUAL_FIELD_DEFECT'][0]}")
-
-    st.write(f"**기타 특이사항** ")
-    # st.divider()
+        <h3 style="color: #4a90e2; font-weight: bold; margin: 30px 0 20px 0; padding-bottom: 10px; border-bottom: 2px solid #4a90e2;">
+            결과 요약
+        </h3>
+        </div>
+    """
+    
+    return complete_html
 
 
 
 def show_detail(fin_scores):
     
-    # 리포트 데이터 가져오기
+    # 리포트 데이터 가져오기  
     report = st.session_state.selected_report
-    #                         st.session_state.selected_report = {
-                            # 'type': row['ASSESS_TYPE'],
-                            # 'date': row['ASSESS_DATE'],
-                            # 'patient_id': row['PATIENT_ID'],
-                            # 'order_num': row['ORDER_NUM']
-                        # }
-    # score_df=pd.DataFrame([report[patient_id],report[order_num],report['type'],], columns = ['PATIENT_ID', 'ORDER_NUM', 'ASSESS_TYPE', 'QUESTION_CD', 'QUESTION_NO', 'QUESTION_MINOR_NO', 'SCORE'])
-    # save_score(score_df):
-    #     if (score_df is None) or (len(score_df) == 0):
-    #         return f"오류 발생: 입력된 데이터가 없습니다."
-    #     if len(score_df.columns) != 7:
-    #         return f"오류 발생: 컬럼의 갯수가 7개가 아닙니다."
-    # score_df.columns = ['PATIENT_ID', 'ORDER_NUM', 'ASSESS_TYPE', 'QUESTION_CD', 'QUESTION_NO', 'QUESTION_MINOR_NO', 'SCORE']
     
-    show_detail_common(report['patient_id'])
-    st.subheader("결과 요약")
-    
-    # 검사 결과
-    # if not clap_a_data.empty:
+    # show_detail_common에서 기본 HTML을 가져옴
+    base_html = show_detail_common(report['patient_id'])
+    # 검사 결과 테이블 HTML 생성
+    results_table = ""
     if report['type'] == "CLAP_A":
-        
-        # 차트
-        table_html = f"""
-        <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+        results_table = f"""
+        <table style="border-collapse: collapse; width: 80%; margin: auto; margin-bottom: 40px; font-size: 14px; table-layout: fixed;">
             <thead>
-                <tr style="background-color: #d4edda; font-weight: bold;">
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; background-color: #d8ebff; font-weight: bold; color: #333;">문항 (개수)</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; background-color: #d8ebff; font-weight: bold; color: #333;">결과</th>
-                    <th style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; background-color: #d8ebff; font-weight: bold; color: #333;" colspan="2">실어증 점수</th>
+                <tr>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; background-color: #e3f2fd; color: #333; font-weight: bold; width: 30%;">문항 (개수)</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; background-color: #e3f2fd; color: #333; font-weight: bold; width: 20%;">결과</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; background-color: #e3f2fd; color: #333; font-weight: bold; width: 25%;">실어증 점수</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; background-color: #e3f2fd; color: #333; font-weight: bold; width: 25%;">점수</th>
                 </tr>
             </thead>
             <tbody>
-                <tr style="background-color: #f0f8ff;">
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">듣고 따라 말하기 (10)</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('LTN_RPT', '-')}점</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">따라 말하기</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('LTN_RPT', '-')}점</td>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">듣고 따라 말하기 (10)</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">{fin_scores.get('LTN_RPT', '-')}점</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">따라 말하기</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">{fin_scores.get('LTN_RPT', '-')}점</td>
                 </tr>
-                <tr style="background-color: #f0f8ff;">
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">끝말 맞추기 (5)</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('GUESS_END', '-')}점</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;" rowspan="3">이름대기 및<br>날말찾기</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;" rowspan="3">{fin_scores.get('GUESS_END', 0) + fin_scores.get('SAY_OBJ', 0) + fin_scores.get('SAY_ANI', 0)}점</td>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">끝말 맞추기 (5)</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">{fin_scores.get('GUESS_END', '-')}점</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;" rowspan="3">이름대기 및<br>날말찾기</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;" rowspan="3">{fin_scores.get('GUESS_END', 0) + fin_scores.get('SAY_OBJ', 0) + fin_scores.get('SAY_ANI', 0)}점</td>
                 </tr>
-                <tr style="background-color: #f0f8ff;">
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">물건 이름 말하기 (10)</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('SAY_OBJ', '-')}점</td>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">물건 이름 말하기 (10)</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">{fin_scores.get('SAY_OBJ', '-')}점</td>
                 </tr>
-                <tr style="background-color: #f0f8ff;">
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">동물 이름 말하기 (1)</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('SAY_ANI', '-')}점</td>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">동물 이름 말하기 (1)</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">{fin_scores.get('SAY_ANI', '-')}점</td>
                 </tr>
-                <tr style="background-color: #f0f8ff;">
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">그림 보고 이야기 하기</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('TALK_PIC', '-')}점</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">스스로 말하기</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('TALK_PIC', '-')}점</td>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">그림보고 이야기하기</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">{fin_scores.get('TALK_PIC', '-')}점</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">스스로 말하기</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">{fin_scores.get('TALK_PIC', '-')}점</td>
                 </tr>
-                <tr style="background-color: #d8ebff; font-weight: bold;">
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; font-weight: bold;">합계</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; font-weight: bold;">{fin_scores.get('LTN_RPT', 0) + fin_scores.get('GUESS_END', 0) + fin_scores.get('SAY_OBJ', 0) + fin_scores.get('SAY_ANI', 0) + fin_scores.get('TALK_PIC', 0)}점</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; font-weight: bold;"></td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; font-weight: bold;">{fin_scores.get('LTN_RPT', 0) + fin_scores.get('GUESS_END', 0) + fin_scores.get('SAY_OBJ', 0) + fin_scores.get('SAY_ANI', 0) + fin_scores.get('TALK_PIC', 0)}점</td>
+                <tr style="background-color: #e3f2fd; font-weight: bold;">
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #1976d2; font-weight: bold; font-size: 12px;">합계</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #1976d2; font-weight: bold; font-size: 12px;">{fin_scores.get('LTN_RPT', 0) + fin_scores.get('GUESS_END', 0) + fin_scores.get('SAY_OBJ', 0) + fin_scores.get('SAY_ANI', 0) + fin_scores.get('TALK_PIC', 0)}점</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #1976d2;"></td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #1976d2; font-weight: bold; font-size: 12px;">{fin_scores.get('LTN_RPT', 0) + fin_scores.get('GUESS_END', 0) + fin_scores.get('SAY_OBJ', 0) + fin_scores.get('SAY_ANI', 0) + fin_scores.get('TALK_PIC', 0)}점</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        """
+        fig = show_graph(fin_scores)
+        st.pyplot(fig)
+        
+    elif report['type'] == "CLAP_D":
+        results_table = f"""
+        <table style="border-collapse: collapse; width: 80%; margin: auto; margin-bottom: 40px; font-size: 20px; table-layout: fixed;">
+            <thead>
+                <tr>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; background-color: #e3f2fd; color: #333; font-weight: bold; width: 35%;">문항</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; background-color: #e3f2fd; color: #333; font-weight: bold; width: 45%;">수행 결과</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">'아' 소리내기</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">최대 발성시간 {fin_scores.get('AH_SOUND', 'NaN')}초</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">'퍼' 반복하기</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">평균 회수 {fin_scores.get('P_SOUND', 'NaN')}회</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">'터' 반복하기</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">평균 회수 {fin_scores.get('T_SOUND', 'NaN')}회</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">'커' 반복하기</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">평균 회수 {fin_scores.get('K_SOUND', 'NaN')}회</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">'퍼터커' 반복하기</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">평균 회수 {fin_scores.get('PTK_SOUND', 'NaN')}회</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">또박또박 말하기<br>(단어수준)</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">{fin_scores.get('TALK_CLEAN', 'NaN')}점</td>
                 </tr>
             </tbody>
         </table>
         """
-        
-        st.markdown(table_html, unsafe_allow_html=True)
+        st.session_state['model_completed']=True
+    
+    # 전체 HTML을 결합하고 컨테이너를 닫음
+    complete_html = base_html + results_table + """
+    </div>
+    """
+    
+    # streamlit components를 사용하여 HTML 렌더링
+    import streamlit.components.v1 as components
+    components.html(complete_html, height=1200)
+    
+# def show_graph(fin_scores):
+# import numpy as np
+# import matplotlib.pyplot as plt
 
-    # def show_clap_d_detail(fin_scores):
-    elif report['type'] == "CLAP_D":
+# (선택) 한글 폰트 설정 - 환경에 맞게 주석 해제해서 사용하세요.
+# import matplotlib
+# matplotlib.rcParams['font.family'] = 'AppleGothic'     # macOS
+# matplotlib.rcParams['font.family'] = 'Malgun Gothic'   # Windows
+# matplotlib.rcParams['axes.unicode_minus'] = False
 
-        """CLAP-D 상세 리포트 페이지"""
-        # show_detail_common()
-        # report = st.session_state.selected_report
-        clap_d_data = get_reports(report['patient_id'], 'CLAP_D')
-        
-        # 검사 결과
-        if not clap_d_data.empty:
+def show_graph(fin_scores: dict,
+                          label_map: dict | None = None,
+                          rmax: float | None = None):
+    """
+    fin_scores: {'LTN_RPT':6, 'GUESS_END':5, ...} 형태의 단일 검사 점수 dict
+    title: 그래프 제목
+    label_map: {'LTN_RPT':'끝말 맞추기', ...} 처럼 축 라벨을 바꾸고 싶을 때 전달
+    rmax: 반지름(최대값) 고정하고 싶을 때 숫자로 지정 (None이면 자동)
+    return: matplotlib.figure.Figure
+    """
+    # 라벨과 값 뽑기 (원래 입력 순서 유지)
+    keys = list(fin_scores.keys())
+    vals = [float(fin_scores[k]) for k in keys]
 
-            table_html = f"""
-            <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
-                <thead>
-                    <tr style="background-color: #d4edda; font-weight: bold;">
-                        <th style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; background-color: #d8ebff; font-weight: bold; color: #333;">문항 (개수)</th>
-                        <th style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black; background-color: #d8ebff; font-weight: bold; color: #333;">점수</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr style="background-color: #f0f8ff;">
-                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">'아' 소리내기 (10)</td>
-                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('AH_SOUND', '-')}점</td>
-                    </tr>
-                    <tr style="background-color: #f0f8ff;">
-                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">'퍼' 반복하기 (10)</td>
-                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('P_SOUND', '-')}점</td>
-                    </tr>
-                    <tr style="background-color: #f0f8ff;">
-                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">'터' 반복하기 (10)</td>
-                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('T_SOUND', '-')}점</td>
-                    </tr>
-                    <tr style="background-color: #f0f8ff;">
-                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">'커' 반복하기 (10)</td>
-                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('K_SOUND', '-')}점</td>
-                    </tr>
-                    <tr style="background-color: #f0f8ff;">
-                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">'퍼터커' 반복하기 (10)</td>
-                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('PTK_SOUND', '-')}점</td>
-                    </tr>
-                    <tr style="background-color: #f0f8ff;">
-                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">또박또박 말하기</td>
-                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center; vertical-align: middle; color: black;">{fin_scores.get('TALK_CLEAN', '-')}점</td>
-                    </tr>
-                </tbody>
-            </table>
-            """
-            
-            st.markdown(table_html, unsafe_allow_html=True)
-            st.session_state['model_completed']=True
+    # 축 라벨 매핑
+    if label_map:
+        labels = [label_map.get(k, k) for k in keys]
+    else:
+        labels = keys
+
+    # 도형을 닫기 위해 첫 값 재추가
+    N = len(labels)
+    angles = np.linspace(0, 2*np.pi, N, endpoint=False).tolist()
+    angles += angles[:1]
+    vals_closed = vals + vals[:1]
+
+    # Figure 생성
+    fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
+
+    # 위쪽(북쪽)에서 시작, 시계방향
+    ax.set_theta_offset(np.pi / 2)
+    ax.set_theta_direction(-1)
+
+    # 축/눈금
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(labels)
+    vmax = max(vals) if rmax is None else rmax
+    if vmax <= 0:
+        vmax = 1.0
+    ax.set_ylim(0, vmax)
+
+    # 레이더 폴리곤
+    ax.plot(angles, vals_closed, linewidth=2)
+    ax.fill(angles, vals_closed, alpha=0.25)
+
+    return fig
