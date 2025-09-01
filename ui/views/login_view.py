@@ -14,8 +14,8 @@ def show_login_page():
         """.format(
             __import__('base64').b64encode(open("ui/views/clap.png", "rb").read()).decode()
         ), unsafe_allow_html=True)
-        # st.subheader("의료 검사 시스템")
-        
+
+
         with st.form("login_form"):
             user_id = st.text_input("id", placeholder="user")
             password = st.text_input("비밀번호", type="password", placeholder="1")

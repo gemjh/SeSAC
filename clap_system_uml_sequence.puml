@@ -1,4 +1,4 @@
-@startuml
+@startuml ui_diagram
 title CLAP 시스템 UML 시퀀스 다이어그램
 
 actor User as u
@@ -10,7 +10,7 @@ participant "report_view.py" as report
 participant "db_service.py" as db
 participant "model_service.py" as model
 participant "DB" as database
-participant "AI Models" as aimodels
+participant "Models" as aimodels
 
 note over u, aimodels : CLAP (전산화 언어 기능 선별 검사) 시스템
 
@@ -72,9 +72,9 @@ db --> report : 검사 목록 반환
 report -> u : 검사 목록 표시
 
 u -> report : 특정 검사 "확인하기" 버튼 클릭
-report -> report : view_mode 변경 및 AI 모델 처리 시작
+report -> report : view_mode 변경 및 모델 처리 시작
 
-== AI 모델 처리 (CLAP-A) ==
+== 모델 처리 (CLAP-A) ==
 alt CLAP-A 검사인 경우
     report -> report : model_process(path_info) 호출
     report -> model : get_ltn_rpt() - 듣고 따라 말하기
@@ -103,7 +103,7 @@ alt CLAP-A 검사인 경우
     model --> report : TALK_PIC 점수
 end
 
-== AI 모델 처리 (CLAP-D) ==
+== 모델 처리 (CLAP-D) ==
 alt CLAP-D 검사인 경우
     report -> model : get_ah_sound() - '아' 소리내기
     model -> aimodels : ah_sound.analyze_pitch_stability()
@@ -122,7 +122,7 @@ alt CLAP-D 검사인 경우
 end
 
 == 결과 표시 ==
-report -> report : 모든 AI 모델 점수 수집 완료
+report -> report : 모든 모델 점수 수집 완료
 report -> u : 검사 결과 표시
 
 alt CLAP-A 결과
@@ -130,7 +130,7 @@ alt CLAP-A 결과
     note right : - 듣고 따라 말하기\n- 끝말 맞추기\n- 물건/동물 이름 말하기\n- 그림 보고 이야기하기
 else CLAP-D 결과
     report -> u : 마비말장애 검사 결과 테이블 표시
-    note right : - '아' 소리내기\n- 'ㅍㅌㅋ' 반복하기\n- 또박또박 말하기
+    note right : - '아' 소리내기\n- '퍼터커' 반복하기\n- 또박또박 말하기
 end
 
 == 기존 검사 결과 조회 ==

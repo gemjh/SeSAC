@@ -1,43 +1,59 @@
 @startuml ptk_sequence
 title 퍼터커 음성 신호 처리 시퀀스 다이어그램
 
-participant "Data Loader" as loader
+participant "main" as loader
 participant "audio_preprocess()" as audio_file_transformation
 participant "wav_padding()" as padding
-participant "pred_preprocess()" as preprocess
+participant "x_data_preprocess()" as preprocess
 participant "build_ptk_model()" as model_builder
-participant "Model Training" as training
-participant "ptk_each" as each
-participant "ptk_whole" as ptk
+participant "model.fit()" as model_fit
+participant "pred_preprocess()" as pred_preprocess
+participant "load_model()" as model_pred
+participant "ptk_each()" as ptk_each_pred
+participant "ptk_whole()" as ptk_whole_pred
+participant "model_whole.predict()" as model_whole
+participant "model_each.predict()" as model_each
+
+
 
 == 전처리 과정 ==
+loader -> preprocess: wav_file, sr, n_mels
+preprocess -> audio_file_transformation: path
+audio_file_transformation -> preprocess: mel_db1, round(duration,3), length
+preprocess -> padding: wav_file, wav_max_len
+padding -> preprocess: padded
+preprocess -> loader: padded
 
-loader -> audio_file_transformation: wav_file, sr=16000, n_mels=128
-audio_file_transformation --> padding: mel_db, duration, length
+== 학습 과정(단일 음정) ==
+loader -> model_builder
+model_builder -> loader: model
+loader -> model_fit: x_train, y_train, epochs, batch_size, x_valid, y_valid
+model_fit -> loader: model_each
 
-padding -> preprocess: mel_db, wav_max_len=312
-preprocess --> padding: padded_wav
-padding --> loader: preprocessed_data
+== 학습 과정(다중 음정) ==
+loader -> model_builder
+model_builder -> loader: model
+loader -> model_fit: x_train, y_train, epochs, batch_size, x_valid, y_valid
+model_fit -> loader: model_whole
 
+== 예측 과정 ==
+loader -> ptk_whole_pred: filepath
+ptk_whole_pred -> pred_preprocess: filepath
+pred_preprocess -> ptk_whole_pred: ptk_x_data
+ptk_whole_pred -> model_pred: keras
+model_pred -> ptk_whole_pred: model_whole
+ptk_whole_pred -> model_whole: ptk_x_data
+model_whole -> ptk_whole_pred : pred
+ptk_whole_pred -> loader: pred
 
-== 모델링 과정 ==
+loader -> ptk_each_pred: filepath
+ptk_each_pred -> pred_preprocess: filepath
+pred_preprocess -> ptk_each_pred: ptk_x_data
+ptk_each_pred -> model_pred: keras
+model_pred -> ptk_each_pred: model_each
+ptk_each_pred -> model_each: ptk_x_data
+model_each -> ptk_each_pred : pred
+ptk_each_pred -> loader: pred
 
-loader -> model_builder: ptk_each 모델 생성 요청
-model_builder --> loader: ptk_each_model
-loader -> training: ptk_each input data 전달(퍼: p_1, p_2, p_3, 터: p_4, p_5, p_6, 커: p_7, p_8, p_9)
-
-
-training -> each: compile(optimizer='adam', loss='mse')
-training -> each: fit(epochs=100, batch_size=16)
-each --> training: trained_model
-training --> loader: teo_model.keras
-
-loader -> model_builder: ptk_whole 모델 생성 요청
-model_builder --> loader: ptk_whole_model
-loader -> training: ptk_whole input data 전달(p_10, p_11, p_12)
-training -> ptk: compile(optimizer='adam', loss='mse')
-training -> ptk: fit(epochs=100, batch_size=16)
-ptk --> training: trained_model
-training --> loader: ptk_model.keras
 
 @enduml

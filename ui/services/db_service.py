@@ -4,9 +4,9 @@ import streamlit as st
 def save_scores_to_db(fin_scores):
     """모델링 결과를 DB에 저장하는 함수"""
     # 세션에서 환자 정보 가져오기
-    patient_id = st.session_state.selected_report['patient_id']
-    order_num = st.session_state.selected_report['order_num'] 
-    assess_type = st.session_state.selected_report['type']
+    patient_id = st.session_state.patient_id
+    order_num = st.session_state.order_num 
+    assess_type = st.session_state.selected_filter
     
     # QUESTION_NO와 QUESTION_MINOR_NO 매핑 (QUESTION_CD별로)
     question_mapping = {
@@ -41,20 +41,15 @@ def save_scores_to_db(fin_scores):
     score_df = pd.DataFrame(score_data)
     
     # DB 모듈 가져와서 저장
-    model_comm, report_main = get_db_modules()
+    model_comm, _ = get_db_modules()
     result = model_comm.save_score(score_df)
     
     return result
 
-def get_db_modules():
-    from db.src import model_comm, report_main
-    return model_comm, report_main
-
 # 리포트 조회 함수
 def get_reports(patient_id, test_type=None):
-    model_comm, report_main=get_db_modules()
+    _, report_main=get_db_modules()
     msg,df=report_main.get_assess_lst(patient_id)
-    # print(df)
     try:
         if patient_id is not None:
             df.columns=[
@@ -67,3 +62,9 @@ def get_reports(patient_id, test_type=None):
     if test_type and test_type != "전체":
         df = df[df['ASSESS_TYPE'] == test_type]
     return df
+
+
+def get_db_modules():
+    from db.src import model_comm, report_main
+    return model_comm, report_main
+

@@ -80,6 +80,7 @@ def get_assess_lst(patient_id, assess_type=None):
         sql += "where lst.PATIENT_ID = p.PATIENT_ID "
         sql += "and lst.PATIENT_ID = flst.PATIENT_ID "
         sql += "and lst.ORDER_NUM = flst.ORDER_NUM "
+        sql += "and flst.USE_YN = 'Y' "
         sql += f"and lst.PATIENT_ID = '{patient_id}' "
         if assess_type != None:
             sql += f"and flst.ASSESS_TYPE = '{assess_type}' "

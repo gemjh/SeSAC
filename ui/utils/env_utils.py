@@ -139,5 +139,5 @@ def delete_conda_environment(env_name=''):
         print(f"환경 삭제 중 오류 발생: {e}")
         sys.exit(1)
 
-# conda 환경 자동 활성화 실행
+# 호출만 해도 conda 환경 자동 활성화 실행
 # activate_conda_environment()

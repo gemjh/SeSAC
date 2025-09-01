@@ -6,7 +6,6 @@ try:
     import tensorflow_hub as hub
     import numpy as np
     import librosa
-    import matplotlib.pyplot as plt
     import warnings
     warnings.filterwarnings('ignore')
     
@@ -114,23 +113,23 @@ def filter_pitch(pitch, confidence, threshold=0.7):
     valid_count = sum(1 for p in filtered if p > 0)
     return filtered
 
-def moving_std(seq, win=5):
-    """이동 윈도우 표준편차 계산"""
-    if len(seq) == 0:
-        return []
+# def moving_std(seq, win=5):
+#     """이동 윈도우 표준편차 계산"""
+#     if len(seq) == 0:
+#         return []
     
-    padded = np.pad(seq, (win//2,), mode='edge')
-    std_values = []
+#     padded = np.pad(seq, (win//2,), mode='edge')
+#     std_values = []
     
-    for i in range(len(seq)):
-        window = padded[i:i+win]
-        valid_values = window[window > 0]
-        if len(valid_values) > 1:
-            std_values.append(np.std(valid_values))
-        else:
-            std_values.append(0.0)
+#     for i in range(len(seq)):
+#         window = padded[i:i+win]
+#         valid_values = window[window > 0]
+#         if len(valid_values) > 1:
+#             std_values.append(np.std(valid_values))
+#         else:
+#             std_values.append(0.0)
     
-    return std_values
+#     return std_values
 
 def analyze_pitch_stability(filepath, std_threshold=1.5, confidence_threshold=0.4, window_size=5):
     """SPICE 전용 피치 안정성 분석 파이프라인"""

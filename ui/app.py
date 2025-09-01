@@ -41,11 +41,7 @@ def patched_isin(elements, test_elements, **kwargs):
 torch.isin = patched_isin
 from tqdm import tqdm # 진행률 알려주는 라이브러리
 from views.login_view import show_login_page
-from views.report_view import show_main_interface, show_report_page, show_detail, show_detail_common
-from services.db_service import get_db_modules
-from services.model_service import get_model_modules
-
-
+from views.report_view import show_main_interface
 import pandas as pd
 import plotly.express as px
 import streamlit.components.v1 as components
@@ -56,6 +52,8 @@ import shutil
 import numpy as np
 import librosa
 import torch
+
+# GPU 실행 시 tensorflow 설치 오류 방지
 try:
     import tensorflow as tf
 except Exception as e:
@@ -65,7 +63,7 @@ except Exception as e:
     import tensorflow as tf
     tf.config.set_visible_devices([], 'GPU')
 
-
+# 운영체제 
 from pathlib import Path
 if sys.platform.startswith('win'):
     WINOS=True
@@ -78,7 +76,7 @@ from services.db_service import (
 from utils.style_utils import (
     apply_custom_css
 )
-from utils.footer_utils import add_footer
+
 from services.auth_service import authenticate_user
 
 from services.upload_service import zip_upload, get_connection
@@ -95,14 +93,16 @@ def main():
         st.session_state.user_info = None
         st.session_state.current_page = "리포트"
         st.session_state.view_mode = "list"
-        st.session_state.selected_report = None
         st.session_state.upload_completed=False
 
     # 첫화면: 로그인화면 / 환자정보등록화면
     if not st.session_state.logged_in:
         show_login_page()
+    # 파일이 등록된 경우
     elif st.session_state.upload_completed:
+        # 리포트 메인 이동
         show_main_interface(st.session_state.patient_id,st.session_state.path_info) 
+    # 파일이 등록되지 않은 경우
     else:
         BASE_DIR = Path(__file__).parent
         patient_csv = BASE_DIR / "patient_id.csv"
@@ -117,12 +117,11 @@ def main():
         with col1:
             btn_skip=st.button("업로드 스킵")
             if btn_skip & ('patient_id' in st.session_state):
-                # DB에서 order_num=1인 path_info 조회
                 conn = get_connection()
                 cursor = conn.cursor()
                 # ============================================================================
                 # MySQL cursor unread result 오류 수정 - 2025.08.22 수정
-                # 첫 번째 쿼리를 실행했으면 결과를 소비해야 함
+                # 스킵 버튼을 누르면 DB에서 order_num=1인 path_info 조회 : 미리 SQL에 등록된 경우만 가능
                 # ============================================================================
                 sql = 'SELECT MAX(ORDER_NUM) FROM assess_lst WHERE PATIENT_ID = %s'
                 cursor.execute(sql, (patient_id,))
@@ -137,12 +136,13 @@ def main():
                 cursor.close()
                 conn.close()
                 st.session_state.upload_completed=True
-                st.session_state.model_completed=True
+                # st.session_state.model_completed=True
                 st.session_state.skip=True
                 st.session_state.order_num=order_num
                 st.session_state.path_info=path_info
                 st.rerun()
         with col2:
+            # zip파일이 등록되면 파일 업로드 버튼 보임 - 클릭하면 등록파일 경로를 insert하고 모델링 시작(zip파일 포맷: 환자번호-검사유형-검사번호-음성파일)
             if uploaded_file is not None:
                 btn_apply = st.button("파일 업로드", key="upload_btn")
                 if btn_apply:
