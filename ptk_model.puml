@@ -1,5 +1,5 @@
 @startuml ptk_sequence
-title 퍼터커 음성 신호 처리 시퀀스 다이어그램
+title 퍼터커 반복하기
 
 participant "main" as loader
 participant "audio_preprocess()" as audio_file_transformation
@@ -13,9 +13,11 @@ participant "ptk_each()" as ptk_each_pred
 participant "ptk_whole()" as ptk_whole_pred
 participant "model_whole.predict()" as model_whole
 participant "model_each.predict()" as model_each
+participant "model_comm.get_file_lst()" as model_comm
 
-
-
+== 데이터 준비 ==
+loader -> model_comm: assess_type, question_cd, question_no, order_num 
+model_comm -> loader: wav_label_pairs[path,label]
 == 전처리 과정 ==
 loader -> preprocess: wav_file, sr, n_mels
 preprocess -> audio_file_transformation: path

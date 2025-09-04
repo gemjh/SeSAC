@@ -131,7 +131,7 @@ def filter_pitch(pitch, confidence, threshold=0.7):
     
 #     return std_values
 
-def analyze_pitch_stability(filepath, std_threshold=1.5, confidence_threshold=0.4, window_size=5):
+def analyze_pitch_stability(filepath, std_threshold=.5, confidence_threshold=0.1, window_size=9):
     """SPICE 전용 피치 안정성 분석 파이프라인"""
     print(f"------------------------------------------------------------------------\n\n\n현재 설정: std_threshold = {std_threshold}, confidence_threshold = {confidence_threshold}, window_size = {window_size} \n\n\n------------------------------------------------------------------------")
 

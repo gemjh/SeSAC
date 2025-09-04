@@ -86,13 +86,13 @@ def show_main_interface(patient_id,path_info):
 
         # 회사 로고
         st.markdown("""
-        <div style="display: flex; align-items: center; gap: 10px; margin: auto; margin-left: 15px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin: auto; margin-left: 20px; padding-top: 20px;">
             <img src="data:image/jpeg;base64,{}" width="100"/>
         </div>
         """.format(
             __import__('base64').b64encode(open("ui/utils/logo.jpeg", "rb").read()).decode()
         ), unsafe_allow_html=True)
-        add_easter_egg()
+        # add_easter_egg()
     
     # 리포트 메인화면 호출
     if st.session_state.current_page == "리포트":
@@ -126,6 +126,14 @@ def show_main_interface(patient_id,path_info):
         # }
             fin_scores = dict(zip(ret_df['QUESTION_CD'], ret_df['SCORE']))
             show_detail_assess(fin_scores)
+            # DB에 점수 저장
+            try:
+                from services.db_service import save_scores_to_db
+                save_scores_to_db(fin_scores)
+                print("점수가 성공적으로 DB에 저장되었습니다.")
+            except Exception as e:
+                print(f"DB 저장 중 오류 발생: {e}")
+        
             # 환자 정보 표시
             st.divider()
     else:
@@ -137,7 +145,8 @@ def show_main_interface(patient_id,path_info):
     #     st.info("zip파일과 환자 번호를 모두 선택해 주세요")
     
 # 모델링하고 결과 딕셔너리 반환
-def model_process(path_info):            
+def model_process(path_info):  
+    try:          
         # 세션으로부터 파일 경로와 목록 정보를 조회
         ret = path_info[['MAIN_PATH','SUB_PATH','FILE_NAME']]
 
@@ -297,10 +306,14 @@ def model_process(path_info):
                     elif i < 12:
                         temp_ptk.append(ptk_sound.ptk_whole(ptk_sound_path[i]))
 
-                fin_scores['P_SOUND']=round(max(temp_p),2)
-                fin_scores['T_SOUND']=round(max(temp_t),2)
-                fin_scores['K_SOUND']=round(max(temp_k),2)
-                fin_scores['PTK_SOUND']=round(max(temp_ptk),2)
+                if temp_p:
+                    fin_scores['P_SOUND']=round(max(temp_p), 2)
+                if temp_t:
+                    fin_scores['T_SOUND']=round(max(temp_t), 2)
+                if temp_k:
+                    fin_scores['K_SOUND']=round(max(temp_k), 2)
+                if temp_ptk:
+                    fin_scores['PTK_SOUND']=round(max(temp_ptk), 2)
                 print(f"PTK_SOUND 모델 실행 시간: {time.time() - start_time:.2f}초")
             except Exception as e:
                 print(f"PTK_SOUND 모델 실행 중 오류 발생: {e}")
@@ -334,17 +347,13 @@ def model_process(path_info):
         #     'PTK_SOUND':ptk_sound_result[3],
         #     'TALK_CLEAN':talk_clean_result
         # }
-        
-        # DB에 점수 저장
-        try:
-            from services.db_service import save_scores_to_db
-            save_scores_to_db(fin_scores)
-            print("점수가 성공적으로 DB에 저장되었습니다.")
-            st.session_state.model_completed=True
-        except Exception as e:
-            print(f"DB 저장 중 오류 발생: {e}")
+        st.session_state.model_completed=True
         
         return fin_scores
+    except Exception as e:
+        print(f"모델링 중 오류 발생: {e}")
+        st.rerun()
+        
 
 # 리포트 메인
 def show_report_page(patient_id):
@@ -404,7 +413,7 @@ def show_report_page(patient_id):
                     )                    
                 with col7:
                     if st.button("확인하기 〉", key=f"confirm_{idx}"):
-                        st.session_state.order_num = idx
+                        st.session_state.order_num = idx+1
                         # 상세보기 검사유형 구별
                         if row['ASSESS_TYPE'] == "CLAP_A":
                             st.session_state.view_mode = "clap_a_detail"
@@ -681,14 +690,14 @@ def show_detail_assess(fin_scores):
     
     # 그래프(CLAP-A 한정)
     if st.session_state.selected_filter == "CLAP_A":        
-        col1, col2 = st.columns([5, 4.7])
+        col1, col2 = st.columns([1, 1])
 
         # 두 그래프의 최대값 계산해서 통일
         graph1_data = {'듣고 따라 말하기':fin_scores.get('LTN_RPT', 0),
                        '끝말 맞추기':fin_scores.get('GUESS_END', 0),
                        '물건 이름 말하기':fin_scores.get('SAY_OBJ', 0),
                        '동물 이름 말하기':fin_scores.get('SAY_ANI', 0),
-                       '그림 보고 이야기하기':fin_scores.get('TALK_PIC', 0)}
+                       '그림 보고\n이야기하기':fin_scores.get('TALK_PIC', 0)}
         graph2_data = {'따라 말하기':fin_scores.get('LTN_RPT', 0),
                        '이름 대기 및\n낱말 찾기': fin_scores.get('GUESS_END', 0) + fin_scores.get('SAY_OBJ', 0) + fin_scores.get('SAY_ANI', 0),
                        '스스로 말하기':fin_scores.get('TALK_PIC', 0)}
@@ -699,12 +708,14 @@ def show_detail_assess(fin_scores):
         
         with col1:
             st.header('문항별 점수')
-            fig = show_graph(graph1_data, rmax=common_max)
-            st.pyplot(fig)
+            with st.container():
+                fig = show_graph(graph1_data, rmax=common_max)
+                st.pyplot(fig, use_container_width=False)
         with col2:
             st.header('실어증 점수')
-            a_graph=show_graph(graph2_data, rmax=common_max)
-            st.pyplot(a_graph)
+            with st.container():
+                a_graph=show_graph(graph2_data, rmax=common_max)
+                st.pyplot(a_graph, use_container_width=False)
     
 
 def show_graph(fin_scores: dict,
@@ -747,8 +758,11 @@ def show_graph(fin_scores: dict,
     angles += angles[:1]
     vals_closed = vals + vals[:1]
 
-    # Figure 생성
-    fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
+    # Figure 생성 (상대적 크기)
+    import matplotlib.pyplot as plt
+    fig_width = plt.rcParams['figure.figsize'][0] * 0.7
+    fig_height = plt.rcParams['figure.figsize'][1] * 0.7
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height), subplot_kw=dict(polar=True))
 
     # 위쪽(북쪽)에서 시작, 시계방향
     ax.set_theta_offset(np.pi / 2)
@@ -756,15 +770,20 @@ def show_graph(fin_scores: dict,
 
     # 축/눈금
     ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(labels)
+    ax.set_xticklabels(labels, fontsize=8)
     vmax = max(vals) if vals and rmax is None else (rmax if rmax is not None else 1.0)
     if vmax <= 0:
         vmax = 1.0
     ax.set_ylim(0, vmax)
+    ax.tick_params(axis='y', labelsize=7)
 
     # 레이더 폴리곤
     ax.plot(angles, vals_closed, linewidth=2)
     ax.fill(angles, vals_closed, alpha=0.25)
+
+    # 그래프 크기 강제 통일
+    # plt.subplots_adjust(left=0.05, right=1.95, top=0.95, bottom=0.05)
+    plt.tight_layout()
 
     return fig
 

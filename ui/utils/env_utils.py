@@ -119,7 +119,6 @@ def activate_conda_environment():
             sys.exit(0)
         else:
             print("✅ CLAP_PC 환경이 활성화되어 있습니다.")
-            
     except Exception as e:
         print(f"환경 확인 중 오류 발생: {e}")
         sys.exit(1)

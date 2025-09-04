@@ -14,8 +14,8 @@ dependencies:
   - ipykernel
   - pip:
       - streamlit==1.39.0
-      - tensorflow-macos<=2.19.0      # (Apple Silicon)
-      - tensorflow==2.19.0 
+      - tensorflow-macos<=2.19.0 ; sys_platform == "darwin"      # (Apple Silicon)
+      - tensorflow==2.19.0 ; sys_platform != "darwin"
       - tensorflow-hub==0.16.1
       - torch==2.8.0
       - torchaudio==2.8.0
