@@ -5,7 +5,6 @@ import librosa
 import torch
 import tensorflow as tf
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
-from ui.utils.env_utils import model_common_path
 
 # MPS dtype 호환성 문제 해결을 위한 환경 변수 설정
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"

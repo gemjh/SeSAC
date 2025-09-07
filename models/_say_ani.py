@@ -13,8 +13,8 @@ import librosa
 import torch
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from tensorflow.keras.models import load_model
-from ui.utils.env_utils import model_common_path
 import os
+from ui.utils.env_utils import model_common_path
 
 
 # ====== 고정 설정 ======
@@ -120,9 +120,9 @@ def prepare_inputs_for_inference(wav_path):
     return mel, tok
 
 # ====== 점수 출력 ======
-def score_audio(wav_path, threshold=THRESHOLD, label_names=target_words, top_k=10):
+def score_audio(wav_path, mdl=model, threshold=THRESHOLD, label_names=target_words, top_k=10):
     X_mel, X_tok = prepare_inputs_for_inference(wav_path)
-    probs = model.predict([X_mel, X_tok], verbose=0)[0]   # (num_labels,)
+    probs = mdl.predict([X_mel, X_tok], verbose=0)[0]   # (num_labels,)
     count = int((probs >= threshold).sum())
     picked = [(w, float(p)) for w, p in zip(label_names, probs) if p >= threshold]
     picked_sorted = sorted(picked, key=lambda x: x[1], reverse=True)

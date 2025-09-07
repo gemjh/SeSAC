@@ -6,14 +6,12 @@ from tensorflow.keras.models import load_model
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 import torch
 import os
-from ui.utils.env_utils import model_common_path
-
 # ========== 하이퍼파라미터 설정 ==========
 SAMPLE_RATE   = 16000    # librosa.load
 N_MELS        = 128      # mel-spectrogram
 TOKEN_SEQ_LEN = 512      # Whisper 토큰 길이
 TEMPERATURE = 0
-MODEL_PATH = os.path.join(model_common_path(), "say_obj_model.keras")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "say_obj_model.keras")
 
 # ============================================================================
 # 전역 변수 제거 및 동적 로딩으로 변경 - 2025.08.22 수정
@@ -21,8 +19,9 @@ MODEL_PATH = os.path.join(model_common_path(), "say_obj_model.keras")
 # ============================================================================
 
 # 저장된 가중치 불러오기 (가중치는 작은 파일이므로 전역 로드 유지)
-W_PATH = os.path.join(model_common_path(), "say_obj_weights.npy")
+W_PATH = os.path.join(os.path.dirname(__file__), "say_obj_weights.npy")
 w = np.load(W_PATH)     # [w_r, w_s, w_rs, b]
+
 # Whisper 모델 관련 변수들 (필요할 때 로드)
 device = None
 processor = None

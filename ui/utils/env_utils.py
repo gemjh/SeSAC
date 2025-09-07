@@ -16,6 +16,16 @@ if sys.platform.startswith('win'):
     print("현재 운영체제는 윈도우입니다.")
 else: WINOS = False
 
+from dotenv import load_dotenv
+from pathlib import Path as EnvPath
+import os
+
+def model_common_path():
+    env_path = EnvPath(__file__).parent.parent.parent / ".env"
+    load_dotenv(dotenv_path=env_path)
+    base_path = os.getenv("base_path")
+    cmn_path= os.path.join(base_path,"models")
+    return cmn_path
 
 # TensorFlow 설정 (import 전에 설정)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -54,7 +64,7 @@ def find_conda_base():
 def create_environment():
     """conda 환경 자동 생성"""
     print("환경이 없습니다. 자동으로 생성합니다...")
-    script_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    script_dir = os.path.dirname(os.path.dirname(model_common_path()))
     conda_base = find_conda_base()
     if not conda_base:
         print("❌ conda가 설치되어 있지 않습니다.")

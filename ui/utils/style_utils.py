@@ -531,3 +531,4 @@ section[data-testid="stSidebar"] {
 def apply_custom_css():
     """CSS 스타일을 적용하는 함수"""
     st.markdown(CSS_STYLES, unsafe_allow_html=True)
+

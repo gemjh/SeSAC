@@ -1,5 +1,5 @@
-@startuml ui_diagram
-title CLAP 시스템 UML 시퀀스 다이어그램
+@startuml ui_diagram_flow
+title CLAP 소프트웨어 흐름도
 
 actor User as u
 participant "app.py" as app

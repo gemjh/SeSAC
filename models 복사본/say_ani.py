@@ -13,12 +13,9 @@ import librosa
 import torch
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from tensorflow.keras.models import load_model
-from ui.utils.env_utils import model_common_path
-import os
-
 
 # ====== 고정 설정 ======
-MODEL_PATH = os.path.join(model_common_path(),"animal.keras")   # 저장해둔 모델 파일
+MODEL_PATH = "models/animal.keras"   # 저장해둔 모델 파일
 THRESHOLD = 0.15
 MAX_TOKEN_LENGTH = 256
 SAMPLE_RATE = 16000
@@ -62,21 +59,40 @@ class BuildCrossMask(Layer):
         Tq = tf.shape(q)[1]
         return tf.tile(tokmask, [1, Tq, 1])                          # (B,Tq,L)
 
-# ====== 모델 로드 ======
-model = load_model(
-    MODEL_PATH,
-    custom_objects={"TokenRealMask": TokenRealMask, "BuildCrossMask": BuildCrossMask}
-)
+# ============================================================================
+# 전역 모델 로딩 제거 및 동적 로딩으로 변경 - 2025.08.22 수정
+# 메모리 누수 방지를 위해 필요할 때만 모델 로드
+# ============================================================================
 
-# ====== Whisper 로드(학습과 동일한 체크포인트 권장) ======
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-processor = WhisperProcessor.from_pretrained("openai/whisper-medium")
-whisper_model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-medium").to(device)
-whisper_model.eval()
+# 전역 변수들을 None으로 초기화
+device = None
+processor = None
+whisper_model = None
 
-# pad 토큰 ID (학습 시 PAD_ID = len(tokenizer))
-VOCAB_SIZE = len(processor.tokenizer)
-PAD_ID = VOCAB_SIZE
+def _load_models():
+    """모델들을 동적으로 로드하는 함수 - 2025.08.22 추가"""
+    global device, processor, whisper_model
+    
+    # Whisper 모델 로드
+    if device is None or processor is None or whisper_model is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        processor = WhisperProcessor.from_pretrained("openai/whisper-medium")
+        whisper_model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-medium").to(device)
+        whisper_model.eval()
+    
+    # Keras 모델 로드 (매번 새로 로드하여 메모리 관리)
+    model = load_model(
+        MODEL_PATH,
+        custom_objects={"TokenRealMask": TokenRealMask, "BuildCrossMask": BuildCrossMask}
+    )
+    
+    return device, processor, whisper_model, model
+
+# pad 토큰 ID는 동적으로 계산 (processor 로드 후)
+def _get_pad_id():
+    """PAD_ID를 동적으로 계산하는 함수 - 2025.08.22 추가"""
+    _, processor, _, _ = _load_models()
+    return len(processor.tokenizer)
 
 # ====== 전처리 ======
 def load_wav_to_mel(wav_path, sr=SAMPLE_RATE, n_mels=N_MELS):
@@ -89,6 +105,12 @@ def load_wav_to_mel(wav_path, sr=SAMPLE_RATE, n_mels=N_MELS):
 
 @torch.no_grad()
 def extract_token_ids_from_wav(wav_path):
+    # ============================================================================
+    # 동적 모델 로딩 사용 - 2025.08.22 수정
+    # ============================================================================
+    device, processor, whisper_model, _ = _load_models()
+    PAD_ID = _get_pad_id()
+    
     speech, _ = librosa.load(wav_path, sr=SAMPLE_RATE, mono=True)
     inputs = processor(speech, sampling_rate=SAMPLE_RATE, return_tensors="pt")
     input_features = inputs.input_features.to(device)
@@ -121,10 +143,34 @@ def prepare_inputs_for_inference(wav_path):
 
 # ====== 점수 출력 ======
 def score_audio(wav_path, threshold=THRESHOLD, label_names=target_words, top_k=10):
-    X_mel, X_tok = prepare_inputs_for_inference(wav_path)
-    probs = model.predict([X_mel, X_tok], verbose=0)[0]   # (num_labels,)
-    count = int((probs >= threshold).sum())
-    picked = [(w, float(p)) for w, p in zip(label_names, probs) if p >= threshold]
-    picked_sorted = sorted(picked, key=lambda x: x[1], reverse=True)
+    # ============================================================================
+    # 모델 동적 로딩 및 메모리 정리 추가 - 2025.08.22 수정
+    # ============================================================================
+    _, _, _, model = _load_models()
+    
+    try:
+        X_mel, X_tok = prepare_inputs_for_inference(wav_path)
+        probs = model.predict([X_mel, X_tok], verbose=0)[0]   # (num_labels,)
+        count = int((probs >= threshold).sum())
+        picked = [(w, float(p)) for w, p in zip(label_names, probs) if p >= threshold]
+        picked_sorted = sorted(picked, key=lambda x: x[1], reverse=True)
 
-    return count
+        print(f"총점: {count}")
+        return count
+    finally:
+        # ============================================================================
+        # 메모리 정리 - 2025.08.22 추가  
+        # 예측 완료 후 Keras 모델과 TensorFlow 세션을 정리하여 메모리 확보
+        # ============================================================================
+        try:
+            if 'model' in locals():
+                del model
+        except:
+            pass
+        tf.keras.backend.clear_session()
+
+
+# ====== 사용 예시 ======
+
+# wav_file = r"C:\Users\ous37\Downloads\임상data(폴더명 수정)\1004\CLAP_A\6\p_1_0.wav"
+# score_audio(wav_file, model, threshold=THRESHOLD)

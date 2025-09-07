@@ -105,7 +105,7 @@ def get_assess_lst(patient_id, assess_type=None):
 # ####################################### #
 # get_patient_info : 환자 정보 가져오기
 # ####################################### #
-def get_patient_info(patient_id, order_num):
+def get_patient_info(patient_id, order_num=1):
     conn = None
     cursor = None
     try:

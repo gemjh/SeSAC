@@ -1,18 +1,16 @@
 import numpy as np
 import librosa
 import tensorflow as tf
-# from tensorflow.keras.layers import (
-#     Input, Permute, Reshape, Bidirectional, LSTM,
-#     Dropout, Embedding, Dense, MultiHeadAttention
-# )
-# from tensorflow.keras.models import Model
-# from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.layers import (
+    Input, Permute, Reshape, Bidirectional, LSTM,
+    Dropout, Embedding, Dense, MultiHeadAttention
+)
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from tensorflow.keras.models import load_model
 import torch
 import os
-from tqdm import tqdm
-from ui.utils.env_utils import model_common_path
 
 # ========== 설정 ==========
 SAMPLE_RATE = 16000
@@ -31,7 +29,6 @@ TEMPERATURE = 0
 device = "cuda" if torch.cuda.is_available() else "cpu"
 processor = WhisperProcessor.from_pretrained("openai/whisper-base")
 whisper_model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-base").to(device)
-
 
 
 # ========== 함수 정의 ==========
@@ -56,15 +53,22 @@ def wav_to_token_ids(wav_path, sr=SAMPLE_RATE, seq_len=TOKEN_SEQ_LEN):
 
 def prepare_wave(wav_path):
     # wave 파일을 변환
+
     mel_list, token_list, label_list = [], [], []
 
-    for path in tqdm(wav_path, desc="Processing audio files", total=len(wav_path)):
+    wav_src = wav_path
+    
+    mel_list, token_list, label_list = [], [], []
+
+    for path in wav_src:
         mel = wav_to_mel(path)  # (128, time, 1)
         token_ids = wav_to_token_ids(path)  # (128,)
         mel_list.append(mel)
         token_list.append(token_ids)
+        #label_list.append([label])
+        
 
-    # 패딩을 위해 최대 time
+    # 패딩을 위해 최대 time 계산
     #max_time = max(m.shape[1] for m in mel_list)
     max_time = 473
 
@@ -80,35 +84,52 @@ def prepare_wave(wav_path):
 
 def predict_score(wav_path):
     mel_batch, token_batch = prepare_wave(wav_path)
-    # model = load_model('model_ltn_rpt.keras') 
-
-    MODEL_PATH = os.path.join(model_common_path(), "model_ltn_rpt.keras")
-    model = load_model(MODEL_PATH)
-
-    # ========== 예측 ==========
-    preds = model.predict({'mel_input': mel_batch, 'token_input': token_batch})
+    model_path = os.path.join(os.path.dirname(__file__), 'model_ltn_rpt.keras')
+    print(f"모델 경로: {model_path}")
+    print(f"파일 존재 여부: {os.path.exists(model_path)}")
+    
+    # ============================================================================
+    # 모델을 로드하고 사용 후 정리 - 2025.08.22 수정
+    # ============================================================================
+    model = load_model(model_path)
+    
+    try:
+        # ========== 예측 ==========
+        preds = model.predict({'mel_input': mel_batch, 'token_input': token_batch})
+    finally:
+        # ============================================================================
+        # 메모리 정리 - 2025.08.22 추가
+        # 예측 완료 후 모델과 TensorFlow 세션을 정리하여 메모리 확보
+        # ============================================================================
+        try:
+            if 'model' in locals():
+                del model
+        except:
+            pass
+        tf.keras.backend.clear_session()
 
     point = [2.0, 2.0, 2.0, 4.0, 6.0, 8.0, 8.0, 10.0, 14.0, 12.0]
     score = 0.0
     for i, p in enumerate(preds):
         # print(f"[{i}] Predicted: {p[0]:.4f}, score : {p[0]*point[i%10]:.1f} ({point[i%10]:.1f})")
-        score += int(round(p[0]*point[i]))
+        # print(i,p)
+        
+        score += p[0]*point[i]
 
-    return score
+    return int(score)
 
-#사용 예 :
-# if __name__ == "__main__":
-#     wav_path = []
-#     wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_1_0.wav')
-#     wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_2_0.wav')
-#     wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_3_0.wav')
-#     wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_4_0.wav')
-#     wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_5_0.wav')
-#     wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_6_0.wav')
-#     wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_7_0.wav')
-#     wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_8_0.wav')
-#     wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_9_1.wav')
-#     wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_10_1.wav')
+# 사용 예 :
+# wav_path = []
+# wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_1_0.wav')
+# wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_2_0.wav')
+# wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_3_0.wav')
+# wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_4_0.wav')
+# wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_5_0.wav')
+# wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_6_0.wav')
+# wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_7_0.wav')
+# wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_8_0.wav')
+# wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_9_1.wav')
+# wav_path.append(r'C:\Users\joon0\edu\31_Project\Data\clap_data\4053\CLAP_A\3\p_10_1.wav')
 
-#     score = predict_score(wav_path)
-#     print(score)
+# score = predict_score(wav_path)
+# print(score)

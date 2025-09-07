@@ -51,14 +51,6 @@ def get_connection():
     )
     return conn
 
-# st.title("zip 파일 upload")
-
-# patient_id = st.text_input("환자ID를 입력하세요.")
-
-# uploaded_file = st.file_uploader("폴더를 압축(zip)한 파일을 업로드하세요.", type=['zip'])
-
-# btn_apply = st.button("파일 업로드")
-
 def zip_upload(btn_apply,patient_id,uploaded_file):
     if btn_apply & (patient_id is not None) & (uploaded_file is not None):
         logging.info("[START] zip upload ")
@@ -203,21 +195,19 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
                                 conn.rollback()  # 오류 발생 시 롤백
 
                 # #################################################### #
-                # 2025.08.25 - Claude Code Enhancement
+                # 2025.08.25 김재헌
                 # CSV 파일이 없어도 업로드 가능하도록 기본값 처리 로직 추가
-                # ZIP 파일만으로도 업로드 완료할 수 있게 개선
-                # 랜덤 검사자 이름 배정으로 재미 요소 추가 🎲
                 # #################################################### #
                 if not csv_found:
                     try:
-                        # 랜덤 검사자 선택 (장난용 😄)
-                        random_assessors = ['김재헌', '김준영', '이재현', '이효재', '이랑']
-                        selected_assessor = random.choice(random_assessors)
+                        # 랜덤 검사자 선택 (개발자이름)
+                        # random_assessors = ['김재헌', '김준영', '이재현', '이효재', '이랑']
+                        # selected_assessor = random.choice(random_assessors)
                         
                         sql = 'INSERT INTO assess_lst (PATIENT_ID, ORDER_NUM, REQUEST_ORG, ASSESS_DATE, ASSESS_PERSON, AGE, EDU, EXCLUDED, POST_STROKE_DATE, DIAGNOSIS, DIAGNOSIS_ETC, STROKE_TYPE, LESION_LOCATION, HEMIPLEGIA, HEMINEGLECT, VISUAL_FIELD_DEFECT) VALUES '
-                        sql += f"('{patient_id}', {order_num}, NULL, NULL, '{selected_assessor}', NULL, NULL, '0', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)"
+                        sql += f"('{patient_id}', {order_num}, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)"
                         cursor.execute(sql)
-                        logging.info('assess_lst 테이블에 %s 환자 정보 입력 (기본값 - CSV 없음, 검사자: %s)', patient_id, selected_assessor)
+                        logging.info('assess_lst 테이블에 %s 환자 정보 입력 (기본값 - CSV 없음)', patient_id)
                         conn.commit()
                     except Exception as e:
                         logging.error("[Exception] assess_lst 테이블에 %s 환자 정보 입력(기본값) 중 오류 발생: %s", patient_id, e)

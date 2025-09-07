@@ -12,8 +12,9 @@ import librosa
 import torch
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from tensorflow.keras.models import load_model
-from ui.utils.env_utils import model_common_path
 import os
+from ui.utils.env_utils import model_common_path
+
 
 # ====== 설정 ======
 MODEL_PATH =os.path.join(model_common_path(),"multilabel_whisper_attn_medium.keras")
@@ -77,9 +78,9 @@ def prepare_inputs_for_inference(wav_path):
     return mel, token_ids
 
 # ====== 예측 및 점수 계산 (임계값 이상 개수만 점수로) ======
-def score_audio(wav_path, threshold=THRESHOLD, label_names=target_words):
+def score_audio(wav_path, mdl=model, threshold=THRESHOLD, label_names=target_words):
     X_mel, X_tok = prepare_inputs_for_inference(wav_path)
-    pred = model.predict([X_mel, X_tok], verbose=0)[0]   # 항상 전역 model 사용
+    pred = mdl.predict([X_mel, X_tok], verbose=0)[0]   # (NUM_LABELS,)
     count = int(np.sum(pred >= threshold))
     print(f"\n파일: {wav_path}")
     print(f"총점: {count} / {len(label_names)}")
