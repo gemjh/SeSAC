@@ -497,7 +497,7 @@ def show_detail_assess(fin_scores):
     if st.session_state.selected_filter == "CLAP_A":        
         col1, col2 = st.columns([1, 1])
 
-        # 최대값 계산해서 그래프 통일
+        # 최대값 계산해서 그래프 통일(백분율)
         max_scores={
             'LTN_RPT':68,
             'GUESS_END':10,
