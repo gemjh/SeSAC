@@ -18,11 +18,11 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from ui.utils.env_utils import activate_conda_environment
+# from ui.utils.env_utils import activate_conda_environment
 
 spinner = st.spinner('환경 설정 중...')
 spinner.__enter__()
-activate_conda_environment()
+# activate_conda_environment()
 
 # MPS 완전 비활성화
 import torch
@@ -83,7 +83,7 @@ try:
     from services.auth_service import authenticate_user
 
     from services.upload_service import zip_upload, get_connection
-    apply_custom_css()
+    # apply_custom_css()
 
 except ImportError as e:
     spinner.__exit__(None, None, None)
@@ -99,13 +99,13 @@ spinner.__exit__(None, None, None)
 def main():
     btn_apply =False
 
-    # 테스트용
-    st.session_state.upload_completed=True
-    patient_id=1001
-    st.session_state.patient_id=patient_id
-    path_info=[]
-    st.session_state.path_info=path_info
-    uploaded_file=[]
+    # 테스트용(주석해제 시 파일업로드 패스)
+    # st.session_state.upload_completed=True
+    # patient_id=1001
+    # st.session_state.patient_id=patient_id
+    # path_info=[]
+    # st.session_state.path_info=path_info
+    # uploaded_file=[]
 
     # 세션 상태 초기화
     if 'logged_in' not in st.session_state:

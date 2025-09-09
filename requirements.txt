@@ -1,0 +1,28 @@
+python=3.10
+pip
+ffmpeg
+numpy=2.0.2
+pandas
+scikitlearn
+matplotlib
+jupyter
+ipykernel
+streamlit==1.39.0
+tensorflowmacos<=2.19.0 ; sys_platform == "darwin"      # (Apple Silicon)
+tensorflow==2.19.0 ; sys_platform != "darwin"
+tensorflowhub==0.16.1
+torch==2.8.0
+torchaudio==2.8.0
+transformers==4.56.0
+librosa==0.11.0
+soundfile==0.13.1
+openaiwhisper>=20231117
+mysqlconnectorpython==9.1.0
+plotly==5.24.1
+scipy<=1.16.1
+sympy
+pydub==0.25.1
+pythondotenv==1.1.1
+joblib==1.5.1
+streamlit_image_coordinates
+
