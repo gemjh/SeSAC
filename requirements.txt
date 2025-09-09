@@ -11,7 +11,7 @@ plotly==5.24.1
 scipy<=1.16.1
 sympy
 pydub==0.25.1
-pythondotenv==1.1.1
+python-dotenv==1.1.1
 joblib==1.5.1
 streamlit_image_coordinates
 
