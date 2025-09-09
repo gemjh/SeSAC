@@ -39,50 +39,50 @@ def patched_isin(elements, test_elements, **kwargs):
         test_elements = test_elements.cpu()
     return original_isin(elements, test_elements, **kwargs)
 torch.isin = patched_isin
+# try:
+from tqdm import tqdm # 진행률 알려주는 라이브러리
+from ui.views.login_view import show_login_page
+from ui.views.report_view import show_main_interface
+import pandas as pd
+import plotly.express as px
+import streamlit.components.v1 as components
+import tempfile
+import os
+import zipfile
+import shutil
+import numpy as np
+import librosa
+import torch
+from ui.services.model_service import model_process
+
+
+# GPU 실행 시 tensorflow 설치 오류 방지
 try:
-    from tqdm import tqdm # 진행률 알려주는 라이브러리
-    from ui.views.login_view import show_login_page
-    from ui.views.report_view import show_main_interface
-    import pandas as pd
-    import plotly.express as px
-    import streamlit.components.v1 as components
-    import tempfile
-    import os
-    import zipfile
-    import shutil
-    import numpy as np
-    import librosa
-    import torch
-    from ui.services.model_service import model_process
-    
+    import tensorflow as tf
+except Exception as e:
+    print(f"TensorFlow 로드 실패, CPU 전용으로 fallback: {e}")
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+    os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'false'
+    import tensorflow as tf
+    tf.config.set_visible_devices([], 'GPU')
 
-    # GPU 실행 시 tensorflow 설치 오류 방지
-    try:
-        import tensorflow as tf
-    except Exception as e:
-        print(f"TensorFlow 로드 실패, CPU 전용으로 fallback: {e}")
-        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-        os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'false'
-        import tensorflow as tf
-        tf.config.set_visible_devices([], 'GPU')
+# 운영체제 
+from pathlib import Path
+if sys.platform.startswith('win'):
+    WINOS=True
+    print("현재 운영체제는 윈도우입니다.")
+else: WINOS = False
 
-    # 운영체제 
-    from pathlib import Path
-    if sys.platform.startswith('win'):
-        WINOS=True
-        print("현재 운영체제는 윈도우입니다.")
-    else: WINOS = False
+from services.db_service import (
+    get_reports
+)
+from utils.style_utils import (
+    apply_custom_css
+)
 
-    from services.db_service import (
-        get_reports
-    )
-    from utils.style_utils import (
-        apply_custom_css
-    )
+from services.auth_service import authenticate_user
 
-    from services.auth_service import authenticate_user
-
-    from services.upload_service import zip_upload, get_connection
+from services.upload_service import zip_upload, get_connection
     # apply_custom_css()
 
 # except ImportError as e:
@@ -92,7 +92,7 @@ try:
 #     st.session_state.clear()
 #     st.stop()
 
-spinner.__exit__(None, None, None)
+# spinner.__exit__(None, None, None)
 
 
 
