@@ -5,7 +5,7 @@ torchaudio==2.8.0
 transformers==4.56.0
 librosa==0.11.0
 soundfile==0.13.1
-openaiwhisper>=20231117
+openaiwhisper
 mysqlconnectorpython==9.1.0
 plotly==5.24.1
 scipy<=1.16.1
