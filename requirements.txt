@@ -13,5 +13,6 @@ sympy
 pydub==0.25.1
 python-dotenv==1.1.1
 joblib==1.5.1
+matplotlib
 streamlit_image_coordinates
 
