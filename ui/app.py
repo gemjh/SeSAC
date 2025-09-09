@@ -85,12 +85,12 @@ try:
     from services.upload_service import zip_upload, get_connection
     # apply_custom_css()
 
-except ImportError as e:
-    spinner.__exit__(None, None, None)
-    st.warning("일시적인 오류가 발생했습니다. 페이지를 새로고침해 주세요")
-    print(e)
-    st.session_state.clear()
-    st.stop()
+# except ImportError as e:
+#     spinner.__exit__(None, None, None)
+#     st.warning("일시적인 오류가 발생했습니다. 페이지를 새로고침해 주세요")
+#     print(e)
+#     st.session_state.clear()
+#     st.stop()
 
 spinner.__exit__(None, None, None)
 
