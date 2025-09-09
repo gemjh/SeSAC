@@ -1,5 +1,4 @@
-tensorflowmacos<=2.19.0 ; sys_platform == "darwin"      # (Apple Silicon)
-tensorflow==2.19.0 ; sys_platform != "darwin"
+tensorflow==2.19.0
 tensorflowhub==0.16.1
 torch==2.8.0
 torchaudio==2.8.0
