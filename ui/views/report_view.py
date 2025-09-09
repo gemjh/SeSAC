@@ -6,7 +6,6 @@ from services.model_service import (
     get_talk_pic, get_ah_sound, get_ptk_sound, get_talk_clean, 
     get_say_ani, get_ltn_rpt, get_say_obj, get_guess_end
 )
-from models.guess_end import GuessEndInferencer
 from utils.style_utils import apply_custom_css
 import sys
 import os
@@ -20,6 +19,8 @@ import base64
 import matplotlib.pyplot as plt
 import numpy as np
 import logging
+from ui.utils.env_utils import model_common_path
+base_path=os.path.dirname(model_common_path())
 
 apply_custom_css()
 
@@ -67,7 +68,7 @@ def show_main_interface(patient_id,path_info):
             try:
                 st.write(f"**{patient_info['PATIENT_NAME'].iloc[0]} {int(patient_info['AGE'].iloc[0])}세**")
                 st.write(f"환자번호: {patient_info['PATIENT_ID'].iloc[0]}")
-                st.write(f"성별: {'여성' if patient_info['SEX'].iloc[0]==1 else '남성'}")
+                st.write(f"성별: {'여성' if str(patient_info['SEX'].iloc[0])=='1' else '남성'}")
             except:
                 st.write(f"**ㅇㅇ ㅇㅇ세**")
                 st.write(f"환자번호: {st.session_state.patient_id}")
@@ -83,14 +84,16 @@ def show_main_interface(patient_id,path_info):
             st.rerun()
 
         # 회사 로고
-        st.markdown("""
-        <div style="display: flex; align-items: center; gap: 10px; margin: auto; margin-left: 20px; padding-top: 20px;">
-            <img src="data:image/jpeg;base64,{}" width="100"/>
-        </div>
-        """.format(
-            __import__('base64').b64encode(open("ui/utils/logo.jpeg", "rb").read()).decode()
-        ), unsafe_allow_html=True)
-        # add_easter_egg()
+        # st.markdown("""
+        # <div style="display: flex; align-items: center; gap: 10px; margin: auto; margin-left: 20px; padding-top: 20px;">
+        #     <img src="data:image/jpeg;base64,{}" width="100"/>
+        # </div>
+        # """.format(
+        #     __import__('base64').b64encode(open("ui/utils/logo.jpeg", "rb").read()).decode()
+        # ), unsafe_allow_html=True)
+
+        image_path=os.path.join(base_path,"ui/utils/logo.jpeg")
+        add_easter_egg(image_path)
     
     # 리포트 메인화면 호출
     if st.session_state.current_page == "리포트":
@@ -331,18 +334,18 @@ def show_detail_common(patient_id):
             </tr>
             <tr>
                 <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold;">주요 뇌병변 II</td>
-                <td style="border: 1px solid #ddd; padding: 10px;" colspan="5">{'전두엽' if lesion_location=='0' else '두정엽' if lesion_location=='1' else '측두엽' if lesion_location=='2' else '후두엽' if lesion_location=='3' else '소뇌' if lesion_location=='4' else '뇌간' if lesion_location=='5' else '기저핵' if lesion_location=='6' else '시상' if lesion_location=='7' else '엑셀 수정 필요' }</td>
+                <td style="border: 1px solid #ddd; padding: 10px;" colspan="5">{'전두엽' if lesion_location=='0' else '두정엽' if lesion_location=='1' else '측두엽' if lesion_location=='2' else '후두엽' if lesion_location=='3' else '소뇌' if lesion_location=='4' else '뇌간' if lesion_location=='5' else '기저핵' if lesion_location=='6' else '시상' if lesion_location=='7' else '해당 없음' }</td>
             </tr>
         </table>
 
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
             <tr>
                 <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold; width: 15%;">편마비</td>
-                <td style="border: 1px solid #ddd; padding: 10px; width: 20%;">{'오른쪽' if hemiplegia=='0' else '왼쪽' if hemiplegia=='1' else '양쪽' if hemiplegia=='2' else hemiplegia }</td>
+                <td style="border: 1px solid #ddd; padding: 10px; width: 20%;">{'오른쪽' if hemiplegia=='0' else '왼쪽' if hemiplegia=='1' else '없음' if hemiplegia=='2'  else '양쪽' if (('0' in hemiplegia) * ('1' in hemiplegia)) else hemiplegia }</td>
                 <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold; width: 15%;">무시증</td>
-                <td style="border: 1px solid #ddd; padding: 10px; width: 20%;">{'오른쪽' if hemineglect=='0' else '왼쪽' if hemineglect=='1' else '양쪽' if hemineglect=='2' else hemineglect }</td>
+                <td style="border: 1px solid #ddd; padding: 10px; width: 20%;">{'오른쪽' if hemineglect=='0' else '왼쪽' if hemineglect=='1' else '없음' if hemineglect=='2' else '양쪽' if (('0' in hemineglect) * ('1' in hemineglect)) else hemineglect }</td>
                 <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold; width: 15%;">시야결손</td>
-                <td style="border: 1px solid #ddd; padding: 10px; width: 15%;">{'오른쪽' if visual_field_defect=='0' else '왼쪽' if visual_field_defect=='1' else '양쪽' if visual_field_defect=='2' else hemineglect }</td>
+                <td style="border: 1px solid #ddd; padding: 10px; width: 15%;">{'오른쪽' if visual_field_defect=='0' else '왼쪽' if visual_field_defect=='1' else '없음' if visual_field_defect=='2' else '양쪽' if (('0' in visual_field_defect) * ('1' in visual_field_defect)) else visual_field_defect }</td>
             </tr>
             <tr>
                 <td style="border: 1px solid #ddd; padding: 10px; background-color: #f8f9fa; font-weight: bold;">기타 특이사항</td>
@@ -427,9 +430,8 @@ def show_detail_assess(fin_scores):
                 </tr>
                 <tr style="background-color: #e3f2fd; font-weight: bold;">
                     <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #1976d2; font-weight: bold; font-size: 12px;">합계</td>
-                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #1976d2; font-weight: bold; font-size: 12px;">{int(all_sum)}점</td>
-                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #1976d2;"></td>
-                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #1976d2; font-weight: bold; font-size: 12px;">{int(Aphasia_sum)}점</td>
+
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #1976d2;" colspan="4">{int(Aphasia_sum)}점</td>
                 </tr>
             </tbody>
         </table>
@@ -453,19 +455,19 @@ def show_detail_assess(fin_scores):
                 </tr>
                 <tr>
                     <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">'퍼' 반복하기</td>
-                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">평균 회수 {fin_scores.get('P_SOUND', '-')}회</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">평균 횟수 {fin_scores.get('P_SOUND', '-')}회</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">'터' 반복하기</td>
-                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">평균 회수 {fin_scores.get('T_SOUND', '-')}회</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">평균 횟수 {fin_scores.get('T_SOUND', '-')}회</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">'커' 반복하기</td>
-                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">평균 회수 {fin_scores.get('K_SOUND', '-')}회</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">평균 횟수 {fin_scores.get('K_SOUND', '-')}회</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">'퍼터커' 반복하기</td>
-                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">평균 회수 {fin_scores.get('PTK_SOUND', '-')}회</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">평균 횟수 {fin_scores.get('PTK_SOUND', '-')}회</td>
                 </tr>
                 <tr>
                     <td style="border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; color: #333; font-size: 12px;">또박또박 말하기<br></td>
@@ -497,7 +499,7 @@ def show_detail_assess(fin_scores):
     if st.session_state.selected_filter == "CLAP_A":        
         col1, col2 = st.columns([1, 1])
 
-        # 최대값 계산해서 그래프 통일(백분율)
+        # 만점(없으면 최대값) 계산해서 그래프 통일(백분율)
         max_scores={
             'LTN_RPT':68,
             'GUESS_END':10,
@@ -603,51 +605,29 @@ def show_graph(fin_scores: dict,
     return fig
 
 
-def add_easter_egg():
-      """작은 점 클릭하면 이미지 로드하는 이스터에그"""
-      import streamlit.components.v1 as components
+def add_easter_egg(image_path):
+    """ w 클릭하면 이미지 로드하는 이스터에그 """
+    import streamlit as st
+    from streamlit_image_coordinates import streamlit_image_coordinates
+    from PIL import Image
+    import numpy as np
 
-      easter_egg_html = """
-      <div style="position: fixed; top: 20px; right: 20px; z-index: 
-  9999;">
-          <div id="easter-dot" style="
-              width: 13px; 
-              height: 13px; 
-              background-color: rgba(255,0,0,0.8); 
-              border-radius: 50%; 
-              cursor: pointer;
-              transition: all 0.3s ease;
-          " onclick="showEasterEgg()" 
-             
-  onmouseover="this.style.backgroundColor='rgba(255,0,0,0.3)'"
-             
-  onmouseout="this.style.backgroundColor='rgba(0,0,0,0.1)'">
-          </div>
-          
-          <div id="easter-image" style="display: none; position: 
-  absolute; top: 10px; right: 10px;">
-              <img src="https://cataas.com/cat?width=200&height=200" 
-  style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
-              <button onclick="hideEasterEgg()" style="position: 
-  absolute; top: -5px; right: -5px; 
-                     background: red; color: white; border: none; 
-  border-radius: 50%; 
-                     width: 20px; height: 20px; cursor: 
-  pointer;">×</button>
-          </div>
-      </div>
-      
-      <script>
-          function showEasterEgg() {
-              document.getElementById('easter-image').style.display = 
-  'block';
-          }
-          
-          function hideEasterEgg() {
-              document.getElementById('easter-image').style.display = 
-  'none';
-          }
-      </script>
-      """
+    # PIL로 투명 PNG 읽기 (알파 채널 보존)
+    image = Image.open(image_path)
+    image = np.array(image)
 
-      components.html(easter_egg_html, height=50)
+    # 이미지 표시 + 좌표 받기
+    coords = streamlit_image_coordinates(image, width=100)
+
+    if coords is not None:
+        # 클릭 이벤트 발생 시 처리
+        x,y=coords['x'],coords['y']
+        if (50<=x<=60) & (50<=y<=60):
+            st.success(f"x:{x},y:{y}")
+            st.write(streamlit_image_coordinates("/Volumes/SSAM/project/ui/views/clap.png",width=100))
+            # 구글드라이브 공유 링크를 직접 다운로드 링크로 변환
+            # drive_url = "https://drive.google.com/file/d/1VH1vAmk1Vk13iupKVJesfToj9mvGhpX2/view?usp=drive_link"
+            # file_id = drive_url.split('/d/')[1].split('/')[0]
+            # direct_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+            # st.write(streamlit_image_coordinates(drive_url, width=100))
+            

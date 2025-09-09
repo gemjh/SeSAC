@@ -136,16 +136,17 @@ def model_process(path_info):
 
         if len(guess_end_path)>0:
             start_time = time.time()
-            from ui.utils.env_utils import model_common_path
+            # from ui.utils.env_utils import model_common_path
             try:
                 guess_end = get_guess_end()
                 temp=[]
                 # infer = guess_end.GuessEndInferencer(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "models", "guess_end_model.keras"))
-                infer=guess_end.GuessEndInferencer(os.path.join(model_common_path(), "guess_end_model.keras"))
-
                 for idx,p in enumerate(guess_end_path):
-                    temp.append(infer.predict_guess_end(p,idx))
+                    temp.append(guess_end.predict_guess_end_score(p,idx))
                 guess_end_result=sum(temp)
+                # print('--------------\n\n\n',guess_end_result,idx,'\n\n\n----------------------')
+
+
                 fin_scores['GUESS_END']=int(guess_end_result)
                 print(f"GUESS_END 모델 실행 시간: {time.time() - start_time:.2f}초")
             except Exception as e:
@@ -156,7 +157,7 @@ def model_process(path_info):
             start_time = time.time()
             try:
                 say_obj = get_say_obj()
-                say_obj_result=say_obj.predict_total_say_obj(say_obj_path[5],say_obj_path[8])  
+                say_obj_result=say_obj.predict_say_object_total(say_obj_path[5],say_obj_path[8])  
                 fin_scores['SAY_OBJ']=int(say_obj_result)
                 print(f"SAY_OBJ 모델 실행 시간: {time.time() - start_time:.2f}초")
             except Exception as e:

@@ -17,8 +17,8 @@ def show_login_page():
 
 
         with st.form("login_form"):
-            user_id = st.text_input("id", placeholder="user")
-            password = st.text_input("비밀번호", type="password", placeholder="1")
+            user_id = st.text_input("ID", placeholder="SeSAC")
+            password = st.text_input("PASSWORD", type="password")
             
             if st.form_submit_button("로그인", use_container_width=True):
                 if user_id and password:
@@ -31,4 +31,3 @@ def show_login_page():
                 else:
                     st.error("id와 비밀번호를 입력해주세요.")
         
-        st.info("데모 계정 - id: user, 비밀번호: 1")

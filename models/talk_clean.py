@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 import librosa
 import os
-from ui.utils.env_utils import model_common_path
+# from ui.utils.env_utils import model_common_path
 
 
 # audio 파일 -> 멜변환, audio time_step
@@ -32,7 +32,7 @@ def wav_padding(wav, wav_max_len=312):
 def hardtanh(x, min_val=-20.0, max_val=20.0):
     return tf.clip_by_value(x, min_val, max_val)
 
-@tf.keras.utils.register_keras_serializable(package="custom")
+@tf.keras.utils.register_keras_serializable(package="mask")
 class SequenceMask(layers.Layer):
     def call(self, inputs):
         is_padding = tf.reduce_all(tf.equal(inputs, -80.0), axis=[-1,-2])
@@ -89,7 +89,10 @@ sub_x_dict = {}
 
 for i, x in enumerate(sub_x_list):
   sub_x_dict[i] = x
-      
+
+score = {'1':3, '2':2, '3':1, '4':2, '5':2, '6':3, '7':2, '8':2, '9':2, '10':3,
+         '11':2, '12':1, '13':3, '14':2, '15':2, '16':2, '17':2, '18':1, '19':2, '20':3,
+         '21':3, '22':3, '23':1, '24':1, '25':2}
 
 def main(wav_path):
   total_score = 0
@@ -102,7 +105,7 @@ def main(wav_path):
   
     # 모델 로드 - name_scope 스택 오류 방지를 위한 세션 초기화 추가 - 2025.08.26
     tf.keras.backend.clear_session()
-    pred_model = tf.keras.models.load_model(os.path.join(model_common_path(), 'KoSp_tf_CLAP_D.keras'),
+    pred_model = tf.keras.models.load_model('/Volumes/SSAM/project/models/KoSp_tf_CLAP_D.keras',
       custom_objects={
         "hardtanh": hardtanh,
         "SequenceMask": SequenceMask,
@@ -115,7 +118,7 @@ def main(wav_path):
       # path = 'C:/Users/eunhy/1001_p_4_0.wav'
       x_pred_data = pred_preprocess(path,n_mels=80)
       pred_y = pred_model.predict([x_pred_data,np.expand_dims(sub_x_data,axis=0)])
-      total_score += np.argmax(pred_y)
+      total_score += np.round(pred_y[0][0]*score[num],0)
     finally:
       # ============================================================================
       # 메모리 관리 개선 - 2025.08.22 추가

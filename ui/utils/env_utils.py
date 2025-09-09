@@ -64,7 +64,7 @@ def find_conda_base():
 def create_environment():
     """conda 환경 자동 생성"""
     print("환경이 없습니다. 자동으로 생성합니다...")
-    script_dir = os.path.dirname(os.path.dirname(model_common_path()))
+    script_dir = os.path.dirname(model_common_path())
     conda_base = find_conda_base()
     if not conda_base:
         print("❌ conda가 설치되어 있지 않습니다.")

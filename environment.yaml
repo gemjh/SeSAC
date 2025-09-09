@@ -19,13 +19,13 @@ dependencies:
       - tensorflow-hub==0.16.1
       - torch==2.8.0
       - torchaudio==2.8.0
-      - transformers==4.55.2
+      - transformers==4.56.0
       - librosa==0.11.0
-      - soundfile==0.12.1
+      - soundfile==0.13.1
       - openai-whisper>=20231117
       - mysql-connector-python==9.1.0
       - plotly==5.24.1
-      - scipy==1.14.1
+      - scipy<=1.16.1
       - sympy==1.13.3
       - pydub==0.25.1
       - python-dotenv==1.1.1
