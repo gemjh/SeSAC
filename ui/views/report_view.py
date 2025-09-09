@@ -624,7 +624,7 @@ def add_easter_egg(image_path):
         x,y=coords['x'],coords['y']
         if (50<=x<=60) & (50<=y<=60):
             st.success(f"x:{x},y:{y}")
-            st.write(streamlit_image_coordinates("/Volumes/SSAM/project/ui/views/clap.png",width=100))
+            st.write(streamlit_image_coordinates(os.path.join(base_path,"ui","views","clap.png"),width=100))
             # 구글드라이브 공유 링크를 직접 다운로드 링크로 변환
             # drive_url = "https://drive.google.com/file/d/1VH1vAmk1Vk13iupKVJesfToj9mvGhpX2/view?usp=drive_link"
             # file_id = drive_url.split('/d/')[1].split('/')[0]
