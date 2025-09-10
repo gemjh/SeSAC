@@ -6,7 +6,7 @@ dependencies:
   - python=3.10
   - pip
   - ffmpeg
-  - numpy=2.0.2
+  - numpy=1.26.4
   - pandas
   - scikit-learn
   - matplotlib
@@ -29,5 +29,7 @@ dependencies:
       - sympy==1.13.3
       - pydub==0.25.1
       - python-dotenv==1.1.1
+      - joblib==1.5.1
+      - streamlit_image_coordinates==0.4.0
 
     

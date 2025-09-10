@@ -100,12 +100,12 @@ def main():
     btn_apply =False
 
     # 테스트용(주석해제 시 파일업로드 패스)
-    # st.session_state.upload_completed=True
-    # patient_id=1001
-    # st.session_state.patient_id=patient_id
-    # path_info=[]
-    # st.session_state.path_info=path_info
-    # uploaded_file=[]
+    st.session_state.upload_completed=True
+    patient_id=1001
+    st.session_state.patient_id=patient_id
+    path_info=[]
+    st.session_state.path_info=path_info
+    uploaded_file=[]
 
     # 세션 상태 초기화
     if 'logged_in' not in st.session_state:

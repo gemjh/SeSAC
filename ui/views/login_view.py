@@ -29,5 +29,5 @@ def show_login_page():
                     else:
                         st.error("로그인 정보가 올바르지 않습니다.")
                 else:
-                    st.error("id와 비밀번호를 입력해주세요.")
+                    st.error("ID와 PASSWORD를 입력해주세요.")
         

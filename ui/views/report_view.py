@@ -605,6 +605,19 @@ def show_graph(fin_scores: dict,
     return fig
 
 
+@st.dialog("Developers!")
+def show_popup():
+    st.image(os.path.join(base_path,"ui","utils","private","easteregg.jpeg"), width=450)
+    st.write("팀장 : 이랑(끝말맞추기, 물건이름말하기 모델 개발)")
+    st.write("팀원1 : 김재헌(UI, 아소리내기 모델 개발)")
+    st.write("팀원2 : 김준영(DB, 듣고따라말하기 모델 개발)")
+    st.write("팀원3 : 이재현(동물이름말하기, 그림보고이야기하기 모델 개발)")
+    st.write("팀원4 : 이효재(또박또박말하기, 퍼터커반복하기 모델 개발)")
+    st.write("Special Thanks to **Mr.HAN**:sunglasses:")
+
+    if st.button("닫기"):
+        st.rerun()
+
 def add_easter_egg(image_path):
     """ w 클릭하면 이미지 로드하는 이스터에그 """
     import streamlit as st
@@ -624,10 +637,12 @@ def add_easter_egg(image_path):
         x,y=coords['x'],coords['y']
         if (50<=x<=60) & (50<=y<=60):
             st.success(f"x:{x},y:{y}")
-            st.write(streamlit_image_coordinates(os.path.join(base_path,"ui","views","clap.png"),width=100))
+            show_popup()
+            # st.write(streamlit_image_coordinates(os.path.join(base_path,"ui","utils","private","easteregg.jpeg"),width=200))
+            
+            # st.write(streamlit_image_coordinates(os.path.join(base_path,"ui","utils","private"),width=100))
             # 구글드라이브 공유 링크를 직접 다운로드 링크로 변환
             # drive_url = "https://drive.google.com/file/d/1VH1vAmk1Vk13iupKVJesfToj9mvGhpX2/view?usp=drive_link"
             # file_id = drive_url.split('/d/')[1].split('/')[0]
             # direct_url = f"https://drive.google.com/uc?export=download&id={file_id}"
             # st.write(streamlit_image_coordinates(drive_url, width=100))
-            
