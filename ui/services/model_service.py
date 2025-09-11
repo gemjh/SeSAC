@@ -48,7 +48,7 @@ def get_model_modules():
 
 # 모델링하고 결과 딕셔너리 반환
 def model_process(path_info):  
-    # try:          
+    try:          
         # 세션으로부터 파일 경로와 목록 정보를 조회
         ret = path_info[['MAIN_PATH','SUB_PATH','FILE_NAME']]
 
@@ -255,9 +255,6 @@ def model_process(path_info):
         # }
         return fin_scores
 
-    # except Exception as e:
-    #     print(f"모델링 중 오류 발생: {e}")
-    #     raise
-        # if 'model_completed' in st.session_state:
-        #     st.session_state.model_completed=False
-        # st.rerun()
+    except Exception as e:
+        print(f"모델링 중 오류 발생: {e}")
+        raise
