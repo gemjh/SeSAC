@@ -1,17 +1,16 @@
-import os
 import numpy as np
 import librosa
 import tensorflow as tf
 import torch
+import os
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
-from ui.utils.env_utils import model_common_path
 
 # ====== 하이퍼파라미터 ======
 SAMPLE_RATE = 16000
 N_MELS = 128
 MAX_TOKEN_LENGTH = 512
 TEMPERATURE = 0
-MODEL_PATH = os.path.join(model_common_path(), "say_obj_model.keras")  # 재헌님 여기 수정해주세요
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "say_obj_model.keras")  # 재헌님 여기 수정해주세요
 
 # ====== 전역 캐시 ======
 _MODEL = None

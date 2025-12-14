@@ -12,11 +12,10 @@ import librosa
 import torch
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from tensorflow.keras.models import load_model
-from ui.utils.env_utils import model_common_path
 import os
 
 # ====== 설정 ======
-MODEL_PATH =os.path.join(model_common_path(),"multilabel_whisper_attn_medium.keras")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "multilabel_whisper_attn_medium.keras")
 THRESHOLD = 0.38
 MAX_TOKEN_LENGTH = 256
 SAMPLE_RATE = 16000

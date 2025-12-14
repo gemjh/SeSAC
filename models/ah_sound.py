@@ -26,11 +26,11 @@ def setup_tensorflow():
         pass  # 이미 초기화된 경우 무시
     
     # GPU 설정 (오류 무시)
-    # try:
-    #     gpus = tf.config.experimental.list_physical_devices('GPU')
-    #     if gpus:
-    #         for gpu in gpus:
-    #             tf.config.experimental.set_memory_growth(gpu, True)
+    try:
+        gpus = tf.config.experimental.list_physical_devices('GPU')
+        if gpus:
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
     except:
         pass
     
@@ -113,23 +113,27 @@ def filter_pitch(pitch, confidence, threshold=0.7):
     valid_count = sum(1 for p in filtered if p > 0)
     return filtered
 
-def moving_std(seq, win):
-    if len(seq) == 0:
-        return []
-    padded = np.pad(seq, (win//2,), mode='edge')
-    std_values = []
-    for i in range(len(seq)):
-        window = padded[i:i+win]
-        valid_values = window[window > 0]
-        if len(valid_values) > 1:
-            std_values.append(np.std(valid_values))
-        else:
-            std_values.append(0.0)
-    return std_values
+# def moving_std(seq, win=5):
+#     """이동 윈도우 표준편차 계산"""
+#     if len(seq) == 0:
+#         return []
+    
+#     padded = np.pad(seq, (win//2,), mode='edge')
+#     std_values = []
+    
+#     for i in range(len(seq)):
+#         window = padded[i:i+win]
+#         valid_values = window[window > 0]
+#         if len(valid_values) > 1:
+#             std_values.append(np.std(valid_values))
+#         else:
+#             std_values.append(0.0)
+    
+#     return std_values
 
 def analyze_pitch_stability(filepath, std_threshold=.5, confidence_threshold=0.1, window_size=9):
     """SPICE 전용 피치 안정성 분석 파이프라인"""
-    # print(f"------------------------------------------------------------------------\n\n\n현재 설정: std_threshold = {std_threshold}, confidence_threshold = {confidence_threshold}, window_size = {window_size} \n\n\n------------------------------------------------------------------------")
+    print(f"------------------------------------------------------------------------\n\n\n현재 설정: std_threshold = {std_threshold}, confidence_threshold = {confidence_threshold}, window_size = {window_size} \n\n\n------------------------------------------------------------------------")
 
     try:
         # TensorFlow 설정
@@ -146,7 +150,21 @@ def analyze_pitch_stability(filepath, std_threshold=.5, confidence_threshold=0.1
         filtered_pitch = filter_pitch(pitch, confidence, threshold=confidence_threshold)
         
         # 4. 안정성 평가
-        pitch_std = moving_std(filtered_pitch, window_size)
+        def custom_moving_std(seq, win):
+            if len(seq) == 0:
+                return []
+            padded = np.pad(seq, (win//2,), mode='edge')
+            std_values = []
+            for i in range(len(seq)):
+                window = padded[i:i+win]
+                valid_values = window[window > 0]
+                if len(valid_values) > 1:
+                    std_values.append(np.std(valid_values))
+                else:
+                    std_values.append(0.0)
+            return std_values
+        
+        pitch_std = custom_moving_std(filtered_pitch, window_size)
         mono_flags = [s < std_threshold and p > 0 for s, p in zip(pitch_std, filtered_pitch)]
         
         # 5. 결과 계산

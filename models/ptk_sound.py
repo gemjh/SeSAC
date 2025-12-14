@@ -2,13 +2,11 @@ import os
 from tensorflow.keras.models import load_model
 import librosa
 import numpy as np
-from ui.utils.env_utils import model_common_path
 
-
-MODEL_PATH_WHOLE = os.path.join(model_common_path(), "ptk_model.keras")
+MODEL_PATH_WHOLE = os.path.join(os.path.dirname(__file__), "ptk_model.keras")
 model_whole = load_model(MODEL_PATH_WHOLE)
 
-MODEL_PATH_EACH = os.path.join(model_common_path(), "teo_model.keras")
+MODEL_PATH_EACH = os.path.join(os.path.dirname(__file__), "teo_model.keras")
 model_each = load_model(MODEL_PATH_EACH)
 
 

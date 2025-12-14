@@ -3,8 +3,9 @@ import numpy as np
 import tensorflow as tf
 import librosa
 import os
-# from ui.utils.env_utils import model_common_path
 
+# from ui.utils.env_utils import model_common_path
+model_path = os.path.join(os.path.dirname(__file__), "KoSp_tf_CLAP_D.keras")
 
 # audio 파일 -> 멜변환, audio time_step
 def audio_preprocess(wav, sr=16000, n_mels=128):
@@ -105,7 +106,7 @@ def main(wav_path):
   
     # 모델 로드 - name_scope 스택 오류 방지를 위한 세션 초기화 추가 - 2025.08.26
     tf.keras.backend.clear_session()
-    pred_model = tf.keras.models.load_model('/Volumes/SSAM/project/models/KoSp_tf_CLAP_D.keras',
+    pred_model = tf.keras.models.load_model(model_path,
       custom_objects={
         "hardtanh": hardtanh,
         "SequenceMask": SequenceMask,

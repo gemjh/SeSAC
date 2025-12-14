@@ -13,17 +13,26 @@ from pathlib import Path
 import os
 import mysql.connector
 import pandas as pd
+import streamlit as st
 
 env_path = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 def get_connection():
-    conn = mysql.connector.connect(
-        host=os.getenv("db_host"),
-        database=os.getenv("db_database"),
-        user=os.getenv("db_username"),
-        password=os.getenv("db_password")
-    )
+    try:
+        # Railway DB 연결
+        conn = mysql.connector.connect(
+            host=os.getenv("db_host"),
+            database=os.getenv("db_database"),
+            user=os.getenv("db_username"),
+            password=os.getenv("db_password"),
+            port=int(os.getenv("db_port", 3306))
+        )
+        
+        if conn.is_connected():
+            print("✅ Railway DB 연결 성공!")
+    except mysql.connector.Error as e:
+        print(f"❌ 연결 실패: {e}")
     return conn
 
 def is_invalid(value):
@@ -105,7 +114,7 @@ def save_score(score_df):
         cursor = conn.cursor()
 
         for i in range(len(score_df)):
-            patient_id = score_df.iloc[i]['PATIENT_ID']
+            patient_id = st.session_state.patient_id
             order_num = score_df.iloc[i]['ORDER_NUM']
             assess_type = score_df.iloc[i]['ASSESS_TYPE']
             question_cd = score_df.iloc[i]['QUESTION_CD']

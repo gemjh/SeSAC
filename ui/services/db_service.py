@@ -1,5 +1,7 @@
 import pandas as pd
 import streamlit as st
+from services.api_client import APIClient
+
 
 def save_scores_to_db(fin_scores, order_num):
     """모델링 결과를 DB에 저장하는 함수"""
@@ -89,8 +91,9 @@ def save_scores_to_db(fin_scores, order_num):
     return result
 
 # 리포트 조회 함수
-def get_reports(patient_id, test_type=None):
+def get_reports_local(patient_id, test_type=None):
     _, report_main=get_db_modules()
+
     msg,df=report_main.get_assess_lst(patient_id)
     try:
         if patient_id is not None:
@@ -105,6 +108,15 @@ def get_reports(patient_id, test_type=None):
         df = df[df['ASSESS_TYPE'] == test_type]
     return df
 
+def get_reports(patient_id, test_type=None):
+    """리포트 조회 - API 버전"""
+    try:
+        assessments = APIClient.get_assessments(patient_id, test_type)
+        df = pd.DataFrame(assessments)
+        return df
+    except Exception as e:
+        print(f"API 호출 중 오류 발생: {e}")
+        return pd.DataFrame()
 
 def get_db_modules():
     from db.src import model_comm, report_main

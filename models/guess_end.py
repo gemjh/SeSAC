@@ -4,8 +4,6 @@ import tensorflow as tf
 import librosa
 import torch
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
-from ui.utils.env_utils import model_common_path
-
 
 # =========================================================
 # Config
@@ -14,7 +12,7 @@ SAMPLE_RATE = 16000
 N_MELS = 128
 MAX_TOKEN_LENGTH = 256
 NUM_PROMPTS = 5
-MODEL_PATH = os.path.join(model_common_path(), "guess_end_model.keras")  # 재헌님 여기 수정해주세요
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "guess_end_model.keras")  # 재헌님 여기 수정해주세요
 
 # ---------------------------------------------------------
 # 문항별 정답 후보
@@ -125,7 +123,7 @@ def _load_model(model_path=MODEL_PATH):
 # =========================================================
 def predict_guess_end_score(wav_path: str, prompt_id: int, model_path: str = MODEL_PATH, return_probs: bool = False):
     if not (0 <= int(prompt_id) <= 4):
-        raise ValueError(f"prompt_id must be in 0..4, got {prompt_id}")
+        raise ValueError(f"prompt_id must be in 0..4, got {prompt_id}") 
 
     model = _load_model(model_path)
 

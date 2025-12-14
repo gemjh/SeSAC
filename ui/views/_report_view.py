@@ -25,8 +25,7 @@ base_path=os.path.dirname(model_common_path())
 apply_custom_css()
 
 
-
-def show_main_interface(patient_id,path_info):
+def show_main_interface(path_info):
     # 초기화
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "리포트"
@@ -63,18 +62,18 @@ def show_main_interface(patient_id,path_info):
         if 'selected_filter' not in st.session_state:
             st.session_state.selected_filter = "CLAP_A"
         # 사이드바용 환자 정보 조회(이름, 나이, 번호, 성별)
-        patient_info=get_reports(patient_id)    
-        if patient_info is not None and len(patient_info) > 0:
-            try:
-                st.write(f"**{patient_info['patient_name'].iloc[0]} {int(patient_info['age'].iloc[0])}세**")
-                st.write(f"환자번호: {patient_info['patient_id'].iloc[0]}")
-                st.write(f"성별: {'여성' if str(patient_info['sex'].iloc[0])=='1' else '남성'}")
-            except:
-                st.write(f"**ㅇㅇ ㅇㅇ세**")
-                st.write(f"환자번호: {st.session_state.patient_id}")
-                st.write(f"성별: ㅇㅇ")                
-        else:
-            st.write("환자 정보를 등록하면 여기 표시됩니다")
+        patient_info=get_reports(st.session_state.patient_id)    
+        # if patient_info is not None and len(patient_info) > 0:
+        try:
+            st.write(f"**{patient_info['PATIENT_NAME'].iloc[0]} {int(patient_info['AGE'].iloc[0])}세**")
+            st.write(f"환자번호: {patient_info['PATIENT_ID'].iloc[0]}")
+            st.write(f"성별: {'여성' if str(patient_info['SEX'].iloc[0])=='1' else '남성'}")
+        except:
+            st.write(f"**ㅇㅇ ㅇㅇ세**")
+            st.write(f"환자번호: {st.session_state.patient_id}")
+            st.write(f"성별: ㅇㅇ")                
+        # else:
+        #     st.write("환자 정보를 등록하면 여기 표시됩니다")
 
         st.divider()     
 
@@ -99,29 +98,12 @@ def show_main_interface(patient_id,path_info):
     if st.session_state.current_page == "리포트":
         # 초기화면(검사유형 Select하지 않은 상태)
         if st.session_state.view_mode == "list":    
-            show_report_page(patient_info['patient_id'].iloc[0] if not patient_info.empty else '')
-        # # 새로 등록해서 모델링이 진행되지 않은 경우: 첫 파일 업로드 시 zip_upload와 같이 실행되도록 실행위치 다시 변경함
-        # elif 'model_completed' not in st.session_state:
-        #     print('---------------------- model_not_completed -------------------')
-        #     with st.spinner('평가 중...'):
-        #         fin_scores=model_process(path_info)
-        #         # DB에 점수 저장
-        #         try:
-        #             from services.db_service import save_scores_to_db
-        #             save_scores_to_db(fin_scores)
-        #             print("점수가 성공적으로 DB에 저장되었습니다.")
-        #         except Exception as e:
-        #             print(f"DB 저장 중 오류 발생: {e}")
-        #             st.rerun()
-
-                # 리포트 상세 화면
-                # show_detail_assess(fin_scores)
+            show_report_page(patient_info['PATIENT_ID'].iloc[0] if not patient_info.empty else '')
 
         # DB 호출
         else:         
             _, report_main = get_db_modules()     
             _, ret_df =report_main.get_assess_score(st.session_state.patient_id,st.session_state.order_num,st.session_state.selected_filter)
-        # ret_df = pd.DataFrame(rows, columns=['PATIENT_ID', 'ORDER_NUM', 'ASSESS_TYPE', 'QUESTION_CD', 'QUESTION_NM', 'SUBSET', 'SCORE', 'SCORE_REF'])
 
         # fin_scores(검사결과 데이터) 포맷 예시
         # fin_scores = {
@@ -150,6 +132,7 @@ def show_main_interface(patient_id,path_info):
     # else:
     #     st.info("zip파일과 환자 번호를 모두 선택해 주세요")
         
+
 
 # 리포트 메인
 def show_report_page(patient_id):
@@ -203,7 +186,7 @@ def show_report_page(patient_id):
                     )                    
                 with col7:
                     if st.button("확인하기 〉", key=f"confirm_{idx}"):
-                        st.session_state.order_num = idx+1
+                        st.session_state.order_num = int(row['ORDER_NUM'])
                         # 상세보기 검사유형 구별
                         if row['ASSESS_TYPE'] == "CLAP_A":
                             st.session_state.view_mode = "clap_a_detail"

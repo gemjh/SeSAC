@@ -43,13 +43,30 @@ clap_D_cd = {'0':'AH_SOUND', '1':'PTK_SOUND', '2':'TALK_CLEAN', '3':'READ_CLEAN'
 clap_D_pkt_cd = {1:'P_SOUND', 2:'T_SOUND', 3:'K_SOUND', 4:'PTK_SOUND'}  # '퍼터커'인 경우에 사용 (25.08.22)
 
 def get_connection():
-    conn = mysql.connector.connect(
-        host=os.getenv("db_host"),
-        database=os.getenv("db_database"),
-        user=os.getenv("db_username"),
-        password=os.getenv("db_password")
-    )
+    try:
+        # Railway DB 연결
+        conn = mysql.connector.connect(
+            host=os.getenv("db_host"),
+            database=os.getenv("db_database"),
+            user=os.getenv("db_username"),
+            password=os.getenv("db_password"),
+            port=int(os.getenv("db_port", 3306))
+        )
+        
+        if conn.is_connected():
+            print("✅ Railway DB 연결 성공!")
+    except mysql.connector.Error as e:
+        print(f"❌ 연결 실패: {e}")
     return conn
+
+    # conn = mysql.connector.connect(
+    #     host=os.getenv("db_host"),
+    #     port=os.getenv("db_port"),
+    #     database=os.getenv("db_database"),
+    #     user=os.getenv("db_username"),
+    #     password=os.getenv("db_password")
+    # )
+
 
 def zip_upload(btn_apply,patient_id,uploaded_file):
     if btn_apply & (patient_id is not None) & (uploaded_file is not None):
@@ -97,7 +114,7 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
             result = shutil.move(new_folder_path, upload_path)
             logging.info("파일 이동 성공: %s", result)
         except Exception as e:
-            logging.error("파일 이동 실패 : %s", e)
+            logging.error("파일 이동 실패. 폴더 경로를 확인하세요 : %s", e)
 
         
         if os.path.exists(result):  # 파일 이동을 성공하면 파일 정보를 읽어 DB에 저장한다.
@@ -220,7 +237,7 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
                     if os.path.isdir(path_slitem):
                         if slitem == 'CLAP_A':
                             # CLAP_A에 대한 처리
-                            sql = "INSERT INTO ASSESS_FILE_LST (PATIENT_ID,ORDER_NUM,ASSESS_TYPE,QUESTION_CD,QUESTION_NO,QUESTION_MINOR_NO,MAIN_PATH,SUB_PATH,FILE_NAME,DURATION,RATE) VALUES \n"
+                            sql = "INSERT INTO assess_file_lst (PATIENT_ID,ORDER_NUM,ASSESS_TYPE,QUESTION_CD,QUESTION_NO,QUESTION_MINOR_NO,MAIN_PATH,SUB_PATH,FILE_NAME,DURATION,RATE) VALUES \n"
                             clap_a_lst = os.listdir(path_slitem)
                             for clap_a_item in clap_a_lst:
                                 path_clap_a_item = os.path.join(target_path, slitem, clap_a_item)
@@ -257,7 +274,7 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
                             #print('-'*20)
                         elif slitem == 'CLAP_D':
                             # CLAP_D에 대한 처리
-                            sql = "INSERT INTO ASSESS_FILE_LST (PATIENT_ID,ORDER_NUM,ASSESS_TYPE,QUESTION_CD,QUESTION_NO,QUESTION_MINOR_NO,MAIN_PATH,SUB_PATH,FILE_NAME,DURATION,RATE) VALUES \n"
+                            sql = "INSERT INTO assess_file_lst (PATIENT_ID,ORDER_NUM,ASSESS_TYPE,QUESTION_CD,QUESTION_NO,QUESTION_MINOR_NO,MAIN_PATH,SUB_PATH,FILE_NAME,DURATION,RATE) VALUES \n"
                             clap_d_lst = os.listdir(path_slitem)
                             for clap_d_item in clap_d_lst:
                                 path_clap_d_item = os.path.join(target_path, slitem, clap_d_item)
@@ -358,9 +375,9 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
 
                 # assess_score 테이블에 데이터 입력
                 sql = ""
-                sql += "INSERT INTO ASSESS_SCORE (PATIENT_ID, ORDER_NUM, ASSESS_TYPE, QUESTION_CD, QUESTION_NO, QUESTION_MINOR_NO, USE_YN) \n"
+                sql += "INSERT INTO assess_score (PATIENT_ID, ORDER_NUM, ASSESS_TYPE, QUESTION_CD, QUESTION_NO, QUESTION_MINOR_NO, USE_YN) \n"
                 sql += "SELECT PATIENT_ID, ORDER_NUM, ASSESS_TYPE, QUESTION_CD, QUESTION_NO, QUESTION_MINOR_NO, USE_YN \n "
-                sql += "FROM ASSESS_FILE_LST \n"
+                sql += "FROM assess_file_lst \n"
                 sql += "WHERE PATIENT_ID = %s AND ORDER_NUM = %s "
                 try:
                     cursor.execute(sql, (str(patient_id), str(order_num)))
@@ -376,7 +393,7 @@ def zip_upload(btn_apply,patient_id,uploaded_file):
                 try:
                 #     st.subheader("저장한 파일 정보 조회")
                     sql = "SELECT A.PATIENT_ID,A.ORDER_NUM,A.ASSESS_TYPE,A.QUESTION_CD,A.QUESTION_NO,A.MAIN_PATH,A.SUB_PATH,A.FILE_NAME \n"
-                    sql += "FROM ASSESS_FILE_LST A, CODE_MAST C \n"
+                    sql += "FROM assess_file_lst A, code_mast C \n"
                     sql += "WHERE C.CODE_TYPE = 'ASSESS_TYPE' AND A.ASSESS_TYPE = C.MAST_CD AND A.QUESTION_CD=C.SUB_CD AND A.PATIENT_ID = %s AND A.ORDER_NUM = %s AND A.USE_YN = 'Y'\n"
                     sql += "ORDER BY A.ASSESS_TYPE, C.ORDER_NUM, A.QUESTION_NO "
                     # print(sql)

@@ -144,7 +144,6 @@ def model_process(path_info):
                 for idx,p in enumerate(guess_end_path):
                     temp.append(guess_end.predict_guess_end_score(p,idx))
                 guess_end_result=sum(temp)
-                # print('--------------\n\n\n',guess_end_result,idx,'\n\n\n----------------------')
 
 
                 fin_scores['GUESS_END']=int(guess_end_result)
@@ -253,6 +252,7 @@ def model_process(path_info):
         #     'PTK_SOUND':ptk_sound_result[3],
         #     'TALK_CLEAN':talk_clean_result
         # }
+
         return fin_scores
 
     except Exception as e:
