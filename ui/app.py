@@ -82,7 +82,7 @@ try:
 
     from services.auth_service import authenticate_user
 
-    from services.upload_service import zip_upload, get_connection
+    from services.upload_service import zip_upload
     apply_custom_css()
 
 except ImportError as e:

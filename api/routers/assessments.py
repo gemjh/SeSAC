@@ -75,7 +75,7 @@ def get_assessment_scores(
             SELECT 
                 s.PATIENT_ID, s.ORDER_NUM, s.ASSESS_TYPE, 
                 s.QUESTION_CD, s.SCORE
-            FROM assess_score_t s
+            FROM assess_score s
             WHERE s.PATIENT_ID = :patient_id 
             AND s.ORDER_NUM = :order_num
         """

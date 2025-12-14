@@ -1,7 +1,11 @@
 from matplotlib.figure import figaspect
 import streamlit as st
 from views.login_view import show_login_page
-from services.db_service import get_db_modules,get_reports
+# ============================================
+# 핵심 변경: get_db_modules 제거, API 클라이언트 사용
+# ============================================
+from services.db_service import get_reports, get_assessment_scores
+from services.api_client import APIClient
 from services.model_service import (
     get_talk_pic, get_ah_sound, get_ptk_sound, get_talk_clean, 
     get_say_ani, get_ltn_rpt, get_say_obj, get_guess_end
@@ -62,8 +66,11 @@ def show_main_interface(patient_id,path_info):
         # 초기값 설정
         if 'selected_filter' not in st.session_state:
             st.session_state.selected_filter = "CLAP_A"
-        # 사이드바용 환자 정보 조회(이름, 나이, 번호, 성별)
-        patient_info=get_reports(patient_id)    
+        
+        # ============================================
+        # 변경: API를 통한 환자 정보 조회
+        # ============================================
+        patient_info = get_reports(patient_id)    
         if patient_info is not None and len(patient_info) > 0:
             try:
                 st.write(f"**{patient_info['patient_name'].iloc[0]} {int(patient_info['age'].iloc[0])}세**")
@@ -83,15 +90,6 @@ def show_main_interface(patient_id,path_info):
             st.session_state.clear()
             st.rerun()
 
-        # 회사 로고
-        # st.markdown("""
-        # <div style="display: flex; align-items: center; gap: 10px; margin: auto; margin-left: 20px; padding-top: 20px;">
-        #     <img src="data:image/jpeg;base64,{}" width="100"/>
-        # </div>
-        # """.format(
-        #     __import__('base64').b64encode(open("ui/utils/logo.jpeg", "rb").read()).decode()
-        # ), unsafe_allow_html=True)
-
         image_path=os.path.join(base_path,"ui/utils/logo.jpeg")
         add_easter_egg(image_path)
     
@@ -100,55 +98,50 @@ def show_main_interface(patient_id,path_info):
         # 초기화면(검사유형 Select하지 않은 상태)
         if st.session_state.view_mode == "list":    
             show_report_page(patient_info['patient_id'].iloc[0] if not patient_info.empty else '')
-        # # 새로 등록해서 모델링이 진행되지 않은 경우: 첫 파일 업로드 시 zip_upload와 같이 실행되도록 실행위치 다시 변경함
-        # elif 'model_completed' not in st.session_state:
-        #     print('---------------------- model_not_completed -------------------')
-        #     with st.spinner('평가 중...'):
-        #         fin_scores=model_process(path_info)
-        #         # DB에 점수 저장
-        #         try:
-        #             from services.db_service import save_scores_to_db
-        #             save_scores_to_db(fin_scores)
-        #             print("점수가 성공적으로 DB에 저장되었습니다.")
-        #         except Exception as e:
-        #             print(f"DB 저장 중 오류 발생: {e}")
-        #             st.rerun()
 
-                # 리포트 상세 화면
-                # show_detail_assess(fin_scores)
-
-        # DB 호출
+        # DB 호출 - API로 변경
         else:         
-            _, report_main = get_db_modules()     
-            _, ret_df =report_main.get_assess_score(st.session_state.patient_id,st.session_state.order_num,st.session_state.selected_filter)
-        # ret_df = pd.DataFrame(rows, columns=['PATIENT_ID', 'ORDER_NUM', 'ASSESS_TYPE', 'QUESTION_CD', 'QUESTION_NM', 'SUBSET', 'SCORE', 'SCORE_REF'])
+            # ============================================
+            # 핵심 변경: get_db_modules() 제거 → API 호출
+            # ============================================
+            try:
+                scores_df = get_assessment_scores(
+                    st.session_state.patient_id,
+                    st.session_state.order_num,
+                    st.session_state.selected_filter
+                )
+                
+                if not scores_df.empty:
+                    fin_scores = dict(zip(scores_df['question_cd'], scores_df['score']))
+                else:
+                    st.warning("저장된 점수가 없습니다.")
+                    fin_scores = {}
+                    
+                show_detail_assess(fin_scores)
+                # fin_scores(검사결과 데이터) 포맷 예시
+                # fin_scores = {
+                #     'LTN_RPT':ltn_rpt_result,
+                #     'GUESS_END':guess_end_result,
+                #     'SAY_OBJ':say_obj_result,
+                #     'SAY_ANI':say_ani_result,
+                #     'TALK_PIC':talk_pic_result,
+                #     'AH_SOUND':ah_sound_result,
+                #     'P_SOUND':ptk_sound_result[0],
+                #     'T_SOUND':ptk_sound_result[1],
+                #     'K_SOUND':ptk_sound_result[2],
+                #     'PTK_SOUND':ptk_sound_result[3],
+                #     'TALK_CLEAN':talk_clean_result
+                # }                
 
-        # fin_scores(검사결과 데이터) 포맷 예시
-        # fin_scores = {
-        #     'LTN_RPT':ltn_rpt_result,
-        #     'GUESS_END':guess_end_result,
-        #     'SAY_OBJ':say_obj_result,
-        #     'SAY_ANI':say_ani_result,
-        #     'TALK_PIC':talk_pic_result,
-        #     'AH_SOUND':ah_sound_result,
-        #     'P_SOUND':ptk_sound_result[0],
-        #     'T_SOUND':ptk_sound_result[1],
-        #     'K_SOUND':ptk_sound_result[2],
-        #     'PTK_SOUND':ptk_sound_result[3],
-        #     'TALK_CLEAN':talk_clean_result
-        # }
-            fin_scores = dict(zip(ret_df['QUESTION_CD'], ret_df['SCORE']))
-            show_detail_assess(fin_scores)
+            except Exception as e:
+                st.error(f"점수 조회 실패: {str(e)}")
+                logging.error(f"점수 조회 오류: {e}")
         
             # 환자 정보 표시
             st.divider()
     else:
         # 리포트 메뉴 외
         st.markdown("### 해당 기능은 개발 중입니다 ")
-        # st.image("https://cataas.com/cat?width=500&height=400")
-        
-    # else:
-    #     st.info("zip파일과 환자 번호를 모두 선택해 주세요")
         
 
 # 리포트 메인
@@ -168,8 +161,10 @@ def show_report_page(patient_id):
             st.session_state.selected_filter = "CLAP_D"
             st.rerun()
     
-    _, report_main = get_db_modules()
-    _, reports_df = report_main.get_assess_lst(patient_id, st.session_state.selected_filter)
+    # ============================================
+    # 핵심 변경: get_db_modules() 제거 → API 호출
+    # ============================================
+    reports_df = get_reports(patient_id, st.session_state.selected_filter)
 
     if not reports_df.empty:
         # order_num 내림차순 정렬(최신 데이터가 가장 위로 오도록)
@@ -183,31 +178,31 @@ def show_report_page(patient_id):
                 
                 with col2:
                     st.markdown(
-                        f"<div style='line-height: 1.8; font-size: 25px;'><b>{row['ASSESS_TYPE'].replace('_','-')}</b></div>",
+                        f"<div style='line-height: 1.8; font-size: 25px;'><b>{row['assess_type'].replace('_','-')}</b></div>",
                         unsafe_allow_html=True
                     )
                 with col3:
                     st.markdown(
-                        f"<div style='line-height: 1.8; font-size: 20px;'>검사일자 <b>{row['ASSESS_DATE']}</b></div>",
+                        f"<div style='line-height: 1.8; font-size: 20px;'>검사일자 <b>{row['assess_date']}</b></div>",
                         unsafe_allow_html=True
                     )
                 with col4:
                     st.markdown(
-                        f"<div style='line-height: 1.8; font-size: 20px;'>의뢰인 <b>{row['REQUEST_ORG']}</b></div>",
+                        f"<div style='line-height: 1.8; font-size: 20px;'>의뢰인 <b>{row['request_org']}</b></div>",
                         unsafe_allow_html=True
                     )                    
                 with col5:
                     st.markdown(
-                        f"<div style='line-height: 1.8; font-size: 20px;'>검사자 <b>{row['ASSESS_PERSON']}</b></div>",
+                        f"<div style='line-height: 1.8; font-size: 20px;'>검사자 <b>{row['assess_person']}</b></div>",
                         unsafe_allow_html=True
                     )                    
                 with col7:
                     if st.button("확인하기 〉", key=f"confirm_{idx}"):
-                        st.session_state.order_num = idx+1
+                        st.session_state.order_num = int(row['order_num'])
                         # 상세보기 검사유형 구별
-                        if row['ASSESS_TYPE'] == "CLAP_A":
+                        if row['assess_type'] == "CLAP_A":
                             st.session_state.view_mode = "clap_a_detail"
-                        elif row['ASSESS_TYPE'] == "CLAP_D":
+                        elif row['assess_type'] == "CLAP_D":
                             st.session_state.view_mode = "clap_d_detail"
 
                         st.rerun()
@@ -216,6 +211,7 @@ def show_report_page(patient_id):
     else:
         # 검사결과가 없는 경우
         st.info(f"{st.session_state.selected_filter.replace('_','-')} 검사 결과가 없습니다.")
+
 
 # 리포트 상세보기 1: 환자 기본정보
 def show_detail_common(patient_id):
@@ -233,29 +229,40 @@ def show_detail_common(patient_id):
     clap_type = st.session_state.selected_filter.replace('_','-')
     subtitle = '실어증' if st.session_state.selected_filter=='CLAP_A' else '마비말장애' if st.session_state.selected_filter=='CLAP_D' else '-'
 
-    # 리포트 상세 가져오기
-    _, report_main = get_db_modules()
-    # --------------------------------------------------------------------------------
-    # 상단 고객정보는 order_num별로 따로따로 저장인지, 처음 저장된 값 쭉 쓰는지 모르겠어서 일단 둘다 해둠
-    # --------------------------------------------------------------------------------
-
-    _, patient_detail_specific = report_main.get_patient_info(patient_id,st.session_state.order_num) # 따로따로 저장하는 경우
-    _, patient_detail = report_main.get_patient_info(patient_id, 1) # 첫 값 쭉 쓰는 경우
-
-    request_org = patient_detail_specific['REQUEST_ORG'][0]
-    assess_person = patient_detail_specific['ASSESS_PERSON'][0]
-    assess_date = patient_detail_specific['ASSESS_DATE'][0]
-    patient_name = patient_detail['PATIENT_NAME'][0]
-    sex = '남' if str(patient_detail['SEX'][0])=='0' else '여' 
-    age = patient_detail['AGE'][0]
-    edu = patient_detail['EDU'][0]
-    diagnosis=str(patient_detail['DIAGNOSIS'][0])
-    post_stroke_date = patient_detail['POST_STROKE_DATE'][0]
-    stroke_type = str(patient_detail['STROKE_TYPE'][0])
-    lesion_location=str(patient_detail['LESION_LOCATION'][0])
-    hemiplegia = str(patient_detail['HEMIPLEGIA'][0] if patient_detail['HEMIPLEGIA'][0]!=None else '없음')
-    hemineglect = str(patient_detail['HEMINEGLECT'][0] if patient_detail['HEMINEGLECT'][0]!=None else '없음')
-    visual_field_defect = str(patient_detail['VISUAL_FIELD_DEFECT'][0] if patient_detail['VISUAL_FIELD_DEFECT'][0]!=None else '없음')
+    # ============================================
+    # 핵심 변경: get_db_modules() 제거 → API 호출
+    # ============================================
+    try:
+        # API를 통한 리포트 데이터 조회
+        report_data = APIClient.get_report(patient_id, st.session_state.order_num)
+        patient_info = report_data.get('patient_info', {})
+        print('-----------------------------\n\n\n')
+        print(patient_info)
+        print('\n\n\n-----------------------------')
+        
+        # 기본값 설정
+        request_org = patient_info.get('request_org', '-')
+        assess_person = patient_info.get('assess_person', '-')
+        assess_date = patient_info.get('assess_date', '-')
+        patient_name = patient_info.get('patient_name', '-')
+        sex = '남' if str(patient_info.get('sex', '0'))=='0' else '여' 
+        age = patient_info.get('age', '-')
+        edu = patient_info.get('edu', '-')
+        diagnosis = str(patient_info.get('diagnosis', '-'))
+        post_stroke_date = patient_info.get('post_stroke_date', '-')
+        stroke_type = str(patient_info.get('stroke_type', '-'))
+        lesion_location = str(patient_info.get('lesion_location', '-'))
+        hemiplegia = str(patient_info.get('hemiplegia', '없음'))
+        hemineglect = str(patient_info.get('hemineglect', '없음'))
+        visual_field_defect = str(patient_info.get('visual_field_defect', '없음'))
+        
+    except Exception as e:
+        logging.error(f"환자 정보 조회 실패: {e}")
+        # 기본값으로 설정
+        request_org = assess_person = assess_date = patient_name = '-'
+        sex = '-'
+        age = edu = diagnosis = post_stroke_date = stroke_type = '-'
+        lesion_location = hemiplegia = hemineglect = visual_field_defect = '-'
     
     # 화면 디자인
     complete_html = f"""
@@ -477,14 +484,7 @@ def show_detail_assess(fin_scores):
         </table>
         """
         st.session_state['model_completed']=True
-        # fig=show_graph({'AH_SOUND':fin_scores.get('AH_SOUND', 0),
-        #                 'P_SOUND': fin_scores.get('P_SOUND', 0),
-        #                 'T_SOUND':fin_scores.get('T_SOUND', 0),
-        #                 'K_SOUND':fin_scores.get('K_SOUND', 0),
-        #                 'PTK_SOUND':fin_scores.get('PTK_SOUND', 0),
-        #                 'TALK_CLEAN':fin_scores.get('TALK_CLEAN', 0)
-        #                 })
-        # st.pyplot(fig)
+
     # 전체 HTML을 결합하고 컨테이너를 닫음
     complete_html = base_html + results_table + """
     </div>
@@ -515,10 +515,6 @@ def show_detail_assess(fin_scores):
         graph2_data = {'따라 말하기':sum([graph1_data.get('듣고 따라 말하기',0)]),
                         '이름 대기 및\n낱말 찾기': name_and_words/sum([max_scores.get('GUESS_END'),max_scores.get('SAY_ANI'),max_scores.get('TALK_PIC')])*100,
                         '스스로 말하기':sum([graph1_data.get('그림 보고\n이야기하기')])}
-        # 최댓값으로 그래프 max 설정
-        # max1 = max(graph1_data.values()) if graph1_data.values() else 1
-        # max2 = max(graph2_data.values()) if graph2_data.values() else 1
-        # common_max = max(max1, max2)
 
         
         with col1:
@@ -586,11 +582,7 @@ def show_graph(fin_scores: dict,
     # 축/눈금
     ax.set_xticks(angles[:-1])
     ax.set_xticklabels(labels, fontsize=8)
-    # vmax = max(vals) if vals and rmax is None else (rmax if rmax is not None else 1.0)
-    # if vmax <= 0:
-    #     vmax = 1.0
     ax.set_ylim(0, rmax)
-    # ax.tick_params(axis='y', labelsize=-1)
     ax.set_yticklabels([])
 
 
@@ -598,8 +590,6 @@ def show_graph(fin_scores: dict,
     ax.plot(angles, vals_closed, linewidth=2)
     ax.fill(angles, vals_closed, alpha=0.25)
 
-    # 그래프 크기 강제 통일
-    # plt.subplots_adjust(left=0.05, right=1.95, top=0.95, bottom=0.05)
     plt.tight_layout()
 
     return fig
@@ -638,11 +628,4 @@ def add_easter_egg(image_path):
         if (50<=x<=60) & (50<=y<=60):
             st.success(f"x:{x},y:{y}")
             show_popup()
-            # st.write(streamlit_image_coordinates(os.path.join(base_path,"ui","utils","private","easteregg.jpeg"),width=200))
-            
-            # st.write(streamlit_image_coordinates(os.path.join(base_path,"ui","utils","private"),width=100))
-            # 구글드라이브 공유 링크를 직접 다운로드 링크로 변환
-            # drive_url = "https://drive.google.com/file/d/1VH1vAmk1Vk13iupKVJesfToj9mvGhpX2/view?usp=drive_link"
-            # file_id = drive_url.split('/d/')[1].split('/')[0]
-            # direct_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-            # st.write(streamlit_image_coordinates(drive_url, width=100))
+            x,y=0,0

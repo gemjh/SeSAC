@@ -20,7 +20,24 @@ def get_report(
     try:
         # 환자 기본 정보
         patient_query = text("""
-            SELECT lst.*, COALESCE(p.NAME, '정보없음') as PATIENT_NAME
+            SELECT 
+                lst.PATIENT_ID,
+                lst.ORDER_NUM,
+                COALESCE(p.NAME, '정보없음') AS PATIENT_NAME,
+                p.SEX AS PATIENT_SEX,
+                lst.REQUEST_ORG,
+                lst.ASSESS_DATE,
+                lst.ASSESS_PERSON,
+                lst.AGE,
+                lst.EDU,
+                lst.POST_STROKE_DATE,
+                lst.DIAGNOSIS,
+                lst.DIAGNOSIS_ETC,
+                lst.STROKE_TYPE,
+                lst.LESION_LOCATION,
+                lst.HEMIPLEGIA,
+                lst.HEMINEGLECT,
+                lst.VISUAL_FIELD_DEFECT
             FROM assess_lst lst
             LEFT JOIN patient_info p ON lst.PATIENT_ID = p.PATIENT_ID
             WHERE lst.PATIENT_ID = :patient_id AND lst.ORDER_NUM = :order_num
@@ -30,7 +47,7 @@ def get_report(
             patient_query, 
             {"patient_id": patient_id, "order_num": order_num}
         )
-        patient_info = patient_cursor.fetchone()
+        patient_info = patient_cursor.mappings().fetchone()
         
         if not patient_info:
             raise HTTPException(status_code=404, detail="검사 기록을 찾을 수 없습니다")
@@ -50,13 +67,23 @@ def get_report(
         
         return {
             "patient_info": {
-                "patient_id": patient_info[0],
-                "order_num": patient_info[1],
-                "patient_name": patient_info[-1],
-                "age": patient_info[5],
-                "assess_date": str(patient_info[3]) if patient_info[3] else None,
-                "request_org": patient_info[2],
-                "assess_person": patient_info[4]
+                "patient_id": patient_info["PATIENT_ID"],
+                "order_num": patient_info["ORDER_NUM"],
+                "patient_name": patient_info["PATIENT_NAME"],
+                "sex": patient_info["PATIENT_SEX"],
+                "age": patient_info["AGE"],
+                "edu": patient_info["EDU"],
+                "request_org": patient_info["REQUEST_ORG"],
+                "assess_date": str(patient_info["ASSESS_DATE"]) if patient_info["ASSESS_DATE"] else None,
+                "assess_person": patient_info["ASSESS_PERSON"],
+                "post_stroke_date": str(patient_info["POST_STROKE_DATE"]) if patient_info["POST_STROKE_DATE"] else None,
+                "diagnosis": patient_info["DIAGNOSIS"],
+                "diagnosis_etc": patient_info["DIAGNOSIS_ETC"],
+                "stroke_type": patient_info["STROKE_TYPE"],
+                "lesion_location": patient_info["LESION_LOCATION"],
+                "hemiplegia": patient_info["HEMIPLEGIA"],
+                "hemineglect": patient_info["HEMINEGLECT"],
+                "visual_field_defect": patient_info["VISUAL_FIELD_DEFECT"]
             },
             "scores": {row[0]: float(row[1]) if row[1] else 0 for row in scores}
         }
