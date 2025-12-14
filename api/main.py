@@ -60,7 +60,7 @@ app.include_router(upload.router, prefix="/api/v1", tags=["Upload & Scores"])
 
 
 # ============================================
-# 헬스 체크
+# main
 # ============================================
 @app.get("/")
 def read_root():

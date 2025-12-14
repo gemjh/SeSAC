@@ -44,15 +44,15 @@ class APIClient:
     """API 통신 클라이언트"""
     
     @staticmethod
-    def get_next_order_num(patient_id: str) -> int:
-        """환자의 다음 수행회차 조회"""
+    def get_order_num(patient_id: str) -> int:
+        """환자의 수행회차 조회"""
         try:
             response = requests.get(
-                f"{API_BASE_URL}/patients/{patient_id}/next-order",
+                f"{API_BASE_URL}/patients/{patient_id}/order",
                 timeout=10
             )
             response.raise_for_status()
-            return response.json().get('next_order_num', 1)
+            return response.json().get('order_num', 1)
         except requests.exceptions.RequestException as e:
             logger.error(f"수행회차 조회 실패: {e}")
             raise Exception(f"API 호출 실패: {str(e)}")
@@ -292,8 +292,8 @@ def zip_upload(btn_apply: bool, patient_id: str, uploaded_file) -> Tuple[Optiona
         
         target_path = os.path.join(upload_path, new_folder_name)
         
-        # 3. API를 통한 수행회차 조회
-        order_num = APIClient.get_next_order_num(patient_id)
+        # 3. API를 통한 수행회차 조회(1부터)
+        order_num = APIClient.get_order_num(patient_id)
         logger.info(f"수행회차: {order_num}")
         
         # 4. CSV 파일 처리

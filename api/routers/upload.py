@@ -87,9 +87,9 @@ def to_sql_value(val):
 # Endpoints
 # ============================================
 
-@router.get("/patients/{patient_id}/next-order")
-def get_next_order_num(patient_id: str, db: Session = Depends(get_db)):
-    """환자의 다음 수행회차 조회"""
+@router.get("/patients/{patient_id}/order")
+def get_order_num(patient_id: str, db: Session = Depends(get_db)):
+    """환자의 수행회차 조회"""
     try:
         query = text("""
             SELECT IFNULL(MAX(order_num) + 1, 1) 
@@ -97,7 +97,7 @@ def get_next_order_num(patient_id: str, db: Session = Depends(get_db)):
             WHERE PATIENT_ID = :patient_id
         """)
         result = db.execute(query, {"patient_id": patient_id}).fetchone()
-        return {"next_order_num": result[0]}
+        return {"order_num": result[0]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"수행회차 조회 실패: {str(e)}")
 
