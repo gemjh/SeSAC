@@ -89,6 +89,14 @@ class APIClient:
             params=params
         )
     
+    @staticmethod
+    def get_assessment_files(patient_id: str, order_num: int) -> List[Dict]:
+        """검사 파일 메타데이터 조회"""
+        return APIClient._make_request(
+            "GET",
+            f"/assessments/{patient_id}/{order_num}/files"
+        )
+    
     # ============================================
     # 점수 저장 (신규 추가)
     # ============================================

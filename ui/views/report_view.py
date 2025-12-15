@@ -622,10 +622,11 @@ def add_easter_egg(image_path):
     # 이미지 표시 + 좌표 받기
     coords = streamlit_image_coordinates(image, width=100)
 
-    if coords is not None:
-        # 클릭 이벤트 발생 시 처리
-        x,y=coords['x'],coords['y']
-        if (50<=x<=60) & (50<=y<=60):
-            st.success(f"x:{x},y:{y}")
-            show_popup()
-            x,y=0,0
+    # if coords is not None:
+    #     # 클릭 이벤트 발생 시 처리
+    #     x,y=coords['x'],coords['y']
+    #     if (50<=x<=60) & (50<=y<=60):
+    #         # st.success(f"x:{x},y:{y}")
+    #         # show_popup():
+    # else:
+    #     x,y=0,0

@@ -7,6 +7,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 import os
+import logging
 # TensorFlow 설정 (import 전에 먼저 설정)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_NUM_INTEROP_THREADS'] = '1'
@@ -76,6 +77,7 @@ try:
     from services.db_service import (
         get_reports
     )
+    from services.api_client import APIClient
     from utils.style_utils import (
         apply_custom_css
     )
@@ -94,6 +96,31 @@ except ImportError as e:
 
 spinner.__exit__(None, None, None)
 
+
+def fetch_existing_path_info(patient_id: str):
+    """기존 업로드 데이터의 파일 정보를 DB에서 조회"""
+    try:
+        assessments = APIClient.get_assessments(patient_id)
+        if not assessments:
+            return None, None
+        
+        latest = max(
+            assessments,
+            key=lambda item: int(item.get('order_num', 0) or 0)
+        )
+        order_num = latest.get('order_num')
+        if not order_num:
+            return None, None
+        
+        files = APIClient.get_assessment_files(patient_id, int(order_num))
+        if not files:
+            return None, None
+        
+        path_info = pd.DataFrame(files)
+        return int(order_num), path_info
+    except Exception as e:
+        logging.error(f"기존 파일 정보 조회 실패: {e}")
+        return None, None
 
 
 def main():
@@ -135,6 +162,19 @@ def main():
             st.session_state.patient_id=patient_id
 
             uploaded_file = st.file_uploader("폴더를 압축(zip)한 파일을 업로드하세요.", type=['zip'])
+            skip_upload = st.button("업로드 스킵", key="skip_btn")
+            if skip_upload:
+                if st.session_state.get('patient_id'):
+                    order_num, path_info = fetch_existing_path_info(st.session_state.patient_id)
+                    if path_info is None or path_info.empty:
+                        st.warning("DB에서 파일 정보를 찾을 수 없습니다.")
+                    else:
+                        st.session_state.path_info = path_info
+                        st.session_state.order_num = order_num
+                        st.session_state.upload_completed = True
+                        st.rerun()
+                else:
+                    st.warning("환자 ID를 먼저 선택하세요.")
             col1, col2 = st.columns([2.5, 7.5])
             with col1:
                 # zip파일이 등록되면 파일 업로드 버튼 보임
